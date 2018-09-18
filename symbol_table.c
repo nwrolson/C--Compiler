@@ -65,7 +65,7 @@ void st_insert(symbol_table* st, const char* key, id_type type, id_data* val) {
 	int index = st_get_hash(id->key, st->size, 0);
 	identifier* current_id = st->items[index];
 	int i = 1;
-	while (current_id != NULL) {
+	while (current_id != NULL && current_id != &DELETED_ID) {
 		index = st_get_hash(id->key, st->size, i);
 		current_id = st->items[index];
 		i++;
@@ -79,8 +79,10 @@ id_data* st_search(symbol_table* st, const char* key) {
 	identifier* id = st->items[index];
 	int i = 1;
 	while (id != NULL) {
-		if (strcmp(id->key, key) == 0) {
-			return id->val;
+		if (id != &DELETED_ID) {
+			if (strcmp(id->key, key) == 0) {
+				return id->val;
+			}
 		}
 		index = st_get_hash(key, st->size, i);
 		id = st->items[index];
@@ -88,6 +90,29 @@ id_data* st_search(symbol_table* st, const char* key) {
 	}	
 	return NULL;
 }
+
+
+// deleting item directly can interfere with collision chain, so
+// just marked as deleted instead, using sentinel defined in header
+
+void st_delete(symbol_table* st, const char* key) {
+	int index = st_get_hash(key, st-> size, 0);
+	identifier* id = st->items[index];
+	int i = 1;
+	while (id != NULL) {
+		if (id != &DELETED_ID) {
+			if (strcmp(id->key, key) == 0) {
+				del_item(id);
+				st->items[index] = &DELETED_ID;
+			}
+		}
+		index = st_get_hash(key, st->size, i);
+		id = st->items[index];
+		i++;
+	}
+	st->count--;
+}
+
 
 int main() {
 	int num = 7;
@@ -98,6 +123,9 @@ int main() {
 	int* result = st_search(st, "apple");
 	if (result == NULL) printf("not found\n");
 	else printf("result: %d\n", result);	
+	st_delete(st, "apple");
+	result = st_search(st, "apple");
+        if (result == NULL) printf("not found\n");
 	del_item(id);
 	return 0;
 }

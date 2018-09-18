@@ -15,6 +15,8 @@ typedef struct identifier {
 	id_data* val;
 } identifier;
 
+static identifier DELETED_ID = {NULL, int_id, NULL};
+
 typedef struct symbol_table {
 	int size;
 	int count;
