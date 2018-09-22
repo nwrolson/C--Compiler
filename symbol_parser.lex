@@ -1,10 +1,11 @@
     int num_lines = 1;
     int num_tokens = 0;
     int num_comments = 0;
+    char comments[1000]="";
 
 DIGIT       [0-9]
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
-%x comment
+%x C_COMMENT
 %%
 \n { //Lines
     ++num_lines;
@@ -13,60 +14,60 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
 " " //eating up extra white space
 
 {DIGIT}+ {
-    printf("An integer: %s\n", yytext);
+    //printf("An integer: %s\n", yytext);
     ++num_tokens;
 }
 
 {DIGIT}+"."{DIGIT}* {
-    printf("A float: %s\n", yytext);
+    //printf("A float: %s\n", yytext);
     ++num_tokens;
 }
 
 {IDENTIFIER} {
-    printf("An identifier: %s\n", yytext);
+    //printf("An identifier: %s\n", yytext);
     ++num_tokens;
 }
 
 "+"|"-"|"*"|"/" {
-    printf("An operator: %s\n", yytext );
+    //printf("An operator: %s\n", yytext );
     ++num_tokens;
 }
 
 \"(\\.|[^"\\])*\" {
-    printf ("A string: %s\n", yytext);
+    //printf ("A string: %s\n", yytext);
     ++num_tokens;
 }
 
 "/*" {
-    BEGIN(comment);
+    BEGIN(C_COMMENT);
+    strcat(comments, "/*");
 }
 
-<comment>[^*\n]* {        // eat anything that's not a '*'
-    printf("A comment line: %s\n", yytext);
+<C_COMMENT>. {        // eat anything that's not a '/n'
+    //printf("A comment character: %s\n", yytext);
+    strcat(comments, yytext);
 }
 
-<comment>"*"+[^*/\n]* {  // eat up '*'s not followed by '/'s
-    printf("A comment line with an asterisk: %s\n", yytext);
-}
-
-<comment>\n {
+<C_COMMENT>\n {
     ++num_lines;
+    strcat(comments, "\n");
 }
-<comment>"*"+"/" {
+<C_COMMENT>"*"+"/" {
     ++num_comments;
     ++num_tokens;
+    strcat(comments, "*/\n");
     BEGIN(INITIAL);
 }
 
 
 "{"|"}"|"("|")"|"="|";"|"," {
-    printf ("A misc symbol: %s\n", yytext);
+    //printf ("A misc symbol: %s\n", yytext);
     ++num_tokens;
 }
 
 %%
 main(){
     yylex();
-    printf( "# of lines = %d, # of tokens = %d\n, # of comments = %d\n",
-            num_lines, num_tokens, num_comments );
+    printf("There are %d tokens /* comments are counted as tokens */\nThere are %d lines\nThere are %d comments:\n", num_tokens, num_lines, num_comments);
+    printf(comments);
 }
