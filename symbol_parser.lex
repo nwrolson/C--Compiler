@@ -23,6 +23,11 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
     ++num_tokens;
 }
 
+return|typedef|if|else|int|float|for|struct|union|void|while {
+    //printf("A keyword: %s\n", yytext);
+    ++num_tokens;
+}
+
 {IDENTIFIER} {
     //printf("An identifier: %s\n", yytext);
     ++num_tokens;
@@ -59,10 +64,14 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
     BEGIN(INITIAL);
 }
 
-
 "{"|"}"|"("|")"|"="|";"|"," {
     //printf ("A misc symbol: %s\n", yytext);
     ++num_tokens;
+}
+
+. {
+    printf("An unidentified token: %s. Exiting scanner.\n", yytext);
+    exit(0);
 }
 
 %%
