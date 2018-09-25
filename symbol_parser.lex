@@ -5,6 +5,7 @@
 
 DIGIT       [0-9]
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
+INVLDTOKEN  [0-9][a-zA-Z_]+
 %x C_COMMENT
 %%
 \n { //Lines
@@ -18,7 +19,7 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
     ++num_tokens;
 }
 
-{DIGIT}+"."{DIGIT}* {
+{DIGIT}*"."{DIGIT}+ {
     //printf("A float: %s\n", yytext);
     ++num_tokens;
 }
@@ -69,8 +70,8 @@ return|typedef|if|else|int|float|for|struct|union|void|while {
     ++num_tokens;
 }
 
-. {
-    printf("An unidentified token: %s. Exiting scanner.\n", yytext);
+{INVLDTOKEN} {
+    printf("An invalid token: %s. Exiting scanner.\n", yytext);
     exit(0);
 }
 
