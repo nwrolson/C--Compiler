@@ -33,14 +33,10 @@ INVLDTOKEN  [0-9][a-zA-Z_]+
     ++num_tokens;
 }
 
-<<<<<<< HEAD
-"struct"|"float"|"int"   ++num_tokens;
-=======
 return|typedef|if|else|int|float|for|struct|union|void|while {
     //printf("A keyword: %s\n", yytext);
     ++num_tokens;
 }
->>>>>>> 8461ee197b3f59f4f11d3b91d44c39de5428dece
 
 {IDENTIFIER} {
     char* key = strdup(yytext);
