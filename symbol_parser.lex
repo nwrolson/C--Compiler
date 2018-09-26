@@ -46,10 +46,8 @@ return|typedef|if|else|int|float|for|struct|union|void|while {
     if (result != NULL) {
       num = *result;
       num++;   
-      //printf("new val: %d\n", num);
     }
     st_insert(st, key, &num);
-//    printf("search: %d\n", result);
     ++num_tokens;
 }
 
@@ -118,6 +116,8 @@ int main(int argc, char *argv[]) {
     printf("There are %d tokens /* comments are counted as tokens */\nThere are %d lines\nThere are %d comments:\n", num_tokens, num_lines, num_comments);
     printf(comments);
 
+    // copy the contents of the symbol table to an array, and sort it
+    printf("Frequency of identifiers:\n");
     char **id_list;
     int i;
     int index = 0;

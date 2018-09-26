@@ -94,21 +94,17 @@ void st_insert(symbol_table* st, const char* key, int* val) {
 		current_id = st->ids[index];
 		i++;
 	}
-	//printf("insert hash: %d\n", index);
 	st->ids[index] = id;
-	//if (st->ids[index] != NULL) printf("key inserted\n");
 	st->count++;
 }
 
 int* st_search(symbol_table* st, const char* key) {
 	int index = st_get_hash(key, st->size, 0);
 	identifier* id = st->ids[index];
-	//printf("search hash: %d\n", index);
 	int i = 1;
 	while (id != NULL) {
 		if (id != &ST_DELETED_ITEM) {
 			if (strcmp(id->key, key) == 0) {
-				//printf("search success, result: %d\n", id->val);
 				return &(id->val);
 			}
 		}
@@ -116,19 +112,6 @@ int* st_search(symbol_table* st, const char* key) {
 		id = st->ids[index];
 		i++;
 	}
-	//printf("search failed\n");
 	return NULL;
 }
 
-// int main() {
-// 	symbol_table* st = st_new_table();
-// 	char* p = "Apple";
-// 	int num = 8;
-// 	//identifier* id = st_new_id(p, &num);
-// 	st_insert(st, "Apple", &num);
-// 	int* result = st_search(st, p);
-// 	if (result != NULL)
-// 		printf("Result: %d\n", result);
-// 	st_del_table(st);
-// 	return 0;
-// }
