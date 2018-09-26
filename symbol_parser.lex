@@ -14,6 +14,7 @@
 
 DIGIT       [0-9]
 IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
+INVLDTOKEN  [0-9][a-zA-Z_]+
 %x C_COMMENT
 %%
 \n { //Lines
@@ -27,12 +28,19 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
     ++num_tokens;
 }
 
-{DIGIT}+"."{DIGIT}* {
+{DIGIT}*"."{DIGIT}+ {
     //printf("A float: %s\n", yytext);
     ++num_tokens;
 }
 
+<<<<<<< HEAD
 "struct"|"float"|"int"   ++num_tokens;
+=======
+return|typedef|if|else|int|float|for|struct|union|void|while {
+    //printf("A keyword: %s\n", yytext);
+    ++num_tokens;
+}
+>>>>>>> 8461ee197b3f59f4f11d3b91d44c39de5428dece
 
 {IDENTIFIER} {
     char* key = strdup(yytext);
@@ -80,10 +88,14 @@ IDENTIFIER  [a-zA-Z_][a-zA-Z0-9_]*
     BEGIN(INITIAL);
 }
 
-
 "{"|"}"|"("|")"|"="|";"|"," {
     //printf ("A misc symbol: %s\n", yytext);
     ++num_tokens;
+}
+
+{INVLDTOKEN} {
+    printf("An invalid token: %s. Exiting scanner.\n", yytext);
+    exit(0);
 }
 
 %%
