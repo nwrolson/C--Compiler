@@ -11,6 +11,7 @@ static int linenumber = 1;
 %token ID
 %token NUM_INT
 %token NUM_FLOAT
+%token STRING
 %token VOID    
 %token INT     
 %token FLOAT   
@@ -68,7 +69,8 @@ global_decl_list :
 global_decl	: function_decl
 		;
 
-function_decl	: type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
+function_decl	:
+    type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
 		;
 
 parameter_list : parameter parameter_tail
@@ -92,16 +94,19 @@ block :
 
 decl_list : 
     decl decl_tail
+    | %empty
     ;
 
 decl_tail :
     decl decl_tail
+    | typedef_decl decl_tail
     | %empty
     ;
 
 decl : 
     type id_list MK_SEMICOLON
     | struct_def
+    | typedef
     ;
 
 bracket_chain : 
@@ -122,6 +127,12 @@ type :
     INT
     | FLOAT 
     | VOID
+    ;
+
+typedef : TYPEDEF type ID MK_SEMICOLON
+        ;
+
+typedef_decl : ID id_list MK_SEMICOLON
     ;
 
 /* Structs */
@@ -164,7 +175,14 @@ expression_statement: expression MK_SEMICOLON
 assignment_statement: assignment MK_SEMICOLON
     ;
 
-assignment: ID OP_ASSIGN expression
+assignment:
+    ID OP_ASSIGN expression
+    | ID reference_bracket_chain OP_ASSIGN expression
+    ;
+
+reference_bracket_chain:
+    MK_LB expression MK_RB reference_bracket_chain
+    | MK_LB expression MK_RB
     ;
 
 /* Expressions */
@@ -172,11 +190,14 @@ assignment: ID OP_ASSIGN expression
 function_call : ID MK_LPAREN expression_list MK_RPAREN
     ;
 
-expression_list : expression expression_tail
+expression_list :
+    expression expression_tail
+    | %empty
+    ;
 
 expression_tail :
     expression expression_tail
-    | %empty
+    | expression
     ;
 
 expression : 
@@ -212,10 +233,14 @@ mul_op_res :
 factor : 
     NUM_INT
     | NUM_FLOAT
+    | STRING
     | ID
     | MK_LPAREN expression MK_RPAREN
     | function_call
+    | array
     ;
+
+array: ID reference_bracket_chain
 
 add_op :
     OP_PLUS
