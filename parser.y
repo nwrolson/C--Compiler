@@ -90,16 +90,9 @@ parameter_bracket_chain :
     ;
 
 block : 
-    decl block_tail
-    | typedef_decl block_tail
-    | statement block_tail
-    | %empty
-    ;
-
-block_tail :
-    decl block_tail
-    | statement block_tail
-    | typedef_decl block_tail
+    decl block
+    | typedef_decl block
+    | statement block
     | %empty
     ;
 
@@ -152,14 +145,8 @@ struct_block :
     ;
 
 decl_list :
-    decl decl_tail
-    | typedef_decl decl_tail
-    | %empty
-    ;
-
-decl_tail :
-    decl decl_tail
-    | typedef_decl decl_tail
+    decl decl_list
+    | typedef_decl decl_list
     | %empty
     ;
 
