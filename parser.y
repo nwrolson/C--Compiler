@@ -64,25 +64,24 @@ global_decl_list :
     |  %empty
 		;
 
-global_decl	: decl_list function_decl_list
+global_decl	: function_decl
 		;
-
-function_decl_list : 
-    function_decl function_decl_list
-    | %empty
-    ;
 
 function_decl	: type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
 		;
 
-parameter_list : 
-    type ID parameter_bracket_chain parameter_list
+parameter_list : parameter parameter_tail
     | %empty;
+
+parameter_tail : 
+    MK_COMMA parameter parameter_tail
+    | %empty;
+
+parameter : type ID parameter_bracket_chain
 
 parameter_bracket_chain : 
     MK_LB MK_RB bracket_chain
     | bracket_chain
-    | %empty
     ;
 
 block : 
@@ -96,10 +95,10 @@ decl_list :
     ;
 
 decl : 
-    type ID bracket_chain
-    | type id_list
-    | struct_def
-    | TYPEDEF type ID
+    type ID bracket_chain MK_SEMICOLON
+    | type id_list MK_SEMICOLON
+    | struct_def MK_SEMICOLON
+    | TYPEDEF type ID MK_SEMICOLON
     ;
 
 bracket_chain : 
@@ -112,15 +111,13 @@ id_list : ID id_tail
     ;
 
 id_tail :
-    ID id_tail
+    MK_COMMA ID id_tail
     | %empty
     ;
 
 type :
     INT
     | FLOAT 
-    | STRUCT ID
-    | ID
     | VOID
     ;
 
@@ -171,7 +168,6 @@ expression_tail :
 expression : 
     expression OP_NOT or_op_res
     | or_op_res
-    | function_call
     ;
 
 or_op_res : 
@@ -251,7 +247,6 @@ while_statement : WHILE MK_LPAREN expression MK_RPAREN MK_LBRACE block MK_RBRACE
 
 
 %%
-
 #include "lex.yy.c"
 main (argc, argv)
 int argc;
@@ -261,8 +256,6 @@ char *argv[];
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
   } 
-
-
 yyerror (mesg)
 char *mesg;
 {
