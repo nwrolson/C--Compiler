@@ -274,7 +274,7 @@ if_statement : IF MK_LPAREN expression MK_RPAREN MK_LBRACE block MK_RBRACE if_ta
     ;
 
 if_tail : 
-    ELSE MK_LBRACE block MK_RBRACE 
+    ELSE MK_LBRACE block MK_RBRACE
     | %empty
     ;
 
