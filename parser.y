@@ -67,8 +67,10 @@ global_decl_list :
     |  %empty
 		;
 
-global_decl	: function_decl
-		;
+global_decl	:
+    function_decl
+    | decl
+    ;
 
 function_decl	:
     type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
@@ -104,8 +106,10 @@ block_tail :
 
 decl : 
     type id_list MK_SEMICOLON
-    | struct_def
+    | type ID OP_ASSIGN expression MK_SEMICOLON
+    /*Is int i=0, j, k; a valid statement?*/
     | typedef
+    | struct_def
     ;
 
 bracket_chain : 
@@ -137,10 +141,15 @@ typedef_decl : ID id_list MK_SEMICOLON
 /* Structs */
 
 struct_def :
-    STRUCT ID MK_LBRACE decl_list MK_RBRACE MK_SEMICOLON
-    | STRUCT ID MK_LBRACE decl_list MK_RBRACE id_list MK_SEMICOLON
-    | TYPEDEF STRUCT ID MK_LBRACE decl_list MK_RBRACE MK_SEMICOLON
-    | STRUCT id_list MK_SEMICOLON
+    STRUCT ID struct_block MK_SEMICOLON
+    | STRUCT ID struct_block id_list MK_SEMICOLON
+    | STRUCT struct_block id_list MK_SEMICOLON
+    | TYPEDEF STRUCT ID struct_block MK_SEMICOLON
+    ;
+
+struct_block :
+    MK_LBRACE decl_list MK_RBRACE
+    | %empty
     ;
 
 decl_list :
@@ -189,17 +198,12 @@ expression_list :
     ;
 
 expression_tail :
-    expression expression_tail
+    MK_COMMA expression expression_tail
     | %empty
     ;
 
 expression : 
-    OP_NOT or_op_res
-    | or_op_res
-    ;
-
-or_op_res : 
-    or_op_res OP_OR and_op_res
+    expression OP_OR and_op_res
     | and_op_res
     ;
 
@@ -219,9 +223,14 @@ add_op_res :
     ;
 
 mul_op_res :
-    mul_op_res mul_op factor
-    | factor
+    mul_op_res mul_op unary_op_res
+    | unary_op_res
     ;
+
+unary_op_res :
+    OP_MINUS factor
+    | OP_NOT factor
+    | factor
 
 factor : 
     NUM_INT
