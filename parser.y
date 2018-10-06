@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 static int linenumber = 1;
-#define YYDEBUG 1
 %}
 
 
@@ -154,6 +153,7 @@ struct_block :
 
 decl_list :
     decl decl_tail
+    | typedef_decl decl_tail
     | %empty
     ;
 
@@ -305,7 +305,6 @@ main (argc, argv)
 int argc;
 char *argv[];
   {
-        yydebug = 1;
      	yyin = fopen(argv[1],"r");
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
