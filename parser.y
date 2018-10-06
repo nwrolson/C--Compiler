@@ -90,15 +90,17 @@ block :
     ;
 
 decl_list : 
-    decl decl_list
+    decl decl_tail
+    ;
+
+decl_tail :
+    decl decl_tail
     | %empty
     ;
 
 decl : 
-    type ID bracket_chain MK_SEMICOLON
-    | type id_list MK_SEMICOLON
-    | struct_def MK_SEMICOLON
-    | TYPEDEF type ID MK_SEMICOLON
+    type id_list MK_SEMICOLON
+    | struct_def
     ;
 
 bracket_chain : 
@@ -107,11 +109,11 @@ bracket_chain :
     ;
 
 
-id_list : ID id_tail
+id_list : ID bracket_chain id_tail
     ;
 
 id_tail :
-    MK_COMMA ID id_tail
+    MK_COMMA ID bracket_chain id_tail
     | %empty
     ;
 
@@ -124,9 +126,11 @@ type :
 /* Structs */
 
 struct_def :
-   STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
-   | TYPEDEF STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
-   ;
+    STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
+    | STRUCT MK_LBRACE struct_block MK_RBRACE ID MK_SEMICOLON
+    | TYPEDEF STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
+    | STRUCT id_list MK_SEMICOLON
+    ;
 
 struct_block : type ID struct_block_tail
     ;
