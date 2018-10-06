@@ -9,7 +9,8 @@ static int linenumber = 1;
 
 
 %token ID
-%token CONST
+%token NUM_INT
+%token NUM_FLOAT
 %token VOID    
 %token INT     
 %token FLOAT   
@@ -104,7 +105,7 @@ decl :
     ;
 
 bracket_chain : 
-    MK_LB INT MK_RB bracket_chain
+    MK_LB NUM_INT MK_RB bracket_chain
     | %empty
     ;
 
@@ -150,11 +151,20 @@ statement_tail :
     ;
 
 statement : 
-    expression MK_SEMICOLON
-    | ID OP_ASSIGN expression MK_SEMICOLON
+    expression_statement
+    | assignment_statement
     | control_statement
     | RETURN MK_SEMICOLON
     | RETURN expression MK_SEMICOLON
+    ;
+
+expression_statement: expression MK_SEMICOLON
+    ;
+
+assignment_statement: assignment MK_SEMICOLON
+    ;
+
+assignment: ID OP_ASSIGN expression
     ;
 
 /* Expressions */
@@ -200,8 +210,8 @@ mul_op_res :
     ;
 
 factor : 
-    INT
-    | FLOAT
+    NUM_INT
+    | NUM_FLOAT
     | ID
     | MK_LPAREN expression MK_RPAREN
     | function_call
@@ -242,8 +252,8 @@ if_tail :
     | %empty
     ;
 
-for_statement : FOR MK_LPAREN expression MK_COMMA expression MK_COMMA
-     expression MK_RPAREN MK_LBRACE block MK_RBRACE
+for_statement : FOR MK_LPAREN assignment_statement expression_statement
+     assignment MK_RPAREN MK_LBRACE block MK_RBRACE
     ;
 
 while_statement : WHILE MK_LPAREN expression MK_RPAREN MK_LBRACE block MK_RBRACE
