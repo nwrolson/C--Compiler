@@ -35,7 +35,6 @@ op_times "*"
 op_divide "/"
 integer {digit}+
 float {digit}+"."{digit}+
-string \"{letter}*\"
 comment	"/*"(([^*])|([*]+[^/*]))*("*")+"/"
 s-const \"([^"\n])*\"
 ws       [ \t]+
@@ -83,7 +82,7 @@ error    .
 {op_divide}     return OP_DIVIDE;
 {integer}       {  return NUM_INT;}
 {float}         {  return NUM_FLOAT;}
-{string}        {  return STRING;}
+{s-const}        {  return STRING;}
 {mk_lparen}     return MK_LPAREN;
 {mk_rparen}     return MK_RPAREN;
 {mk_lbrace}     return MK_LBRACE;

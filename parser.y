@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 static int linenumber = 1;
+#define YYDEBUG 1
 %}
 
 
@@ -88,18 +89,16 @@ parameter_bracket_chain :
     ;
 
 block : 
-    decl_list statement_list
+    decl block_tail
+    | typedef_decl block_tail
+    | statement block_tail
     | %empty
     ;
 
-decl_list : 
-    decl decl_tail
-    | %empty
-    ;
-
-decl_tail :
-    decl decl_tail
-    | typedef_decl decl_tail
+block_tail :
+    decl block_tail
+    | statement block_tail
+    | typedef_decl block_tail
     | %empty
     ;
 
@@ -138,28 +137,24 @@ typedef_decl : ID id_list MK_SEMICOLON
 /* Structs */
 
 struct_def :
-    STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
-    | STRUCT MK_LBRACE struct_block MK_RBRACE ID MK_SEMICOLON
-    | TYPEDEF STRUCT ID MK_LBRACE struct_block MK_RBRACE MK_SEMICOLON
+    STRUCT ID MK_LBRACE decl_list MK_RBRACE MK_SEMICOLON
+    | STRUCT ID MK_LBRACE decl_list MK_RBRACE id_list MK_SEMICOLON
+    | TYPEDEF STRUCT ID MK_LBRACE decl_list MK_RBRACE MK_SEMICOLON
     | STRUCT id_list MK_SEMICOLON
     ;
 
-struct_block : type ID struct_block_tail
+decl_list :
+    decl decl_tail
+    | %empty
     ;
 
-struct_block_tail : 
-    type ID struct_block_tail
+decl_tail :
+    decl decl_tail
+    | typedef_decl decl_tail
     | %empty
+    ;
 
 /* Statements */
-
-statement_list : statement statement_tail
-    ;
-
-statement_tail : 
-    statement statement_tail
-    | %empty
-    ;
 
 statement : 
     expression_statement
@@ -175,9 +170,7 @@ expression_statement: expression MK_SEMICOLON
 assignment_statement: assignment MK_SEMICOLON
     ;
 
-assignment:
-    ID OP_ASSIGN expression
-    | ID reference_bracket_chain OP_ASSIGN expression
+assignment: var OP_ASSIGN expression
     ;
 
 reference_bracket_chain:
@@ -197,11 +190,11 @@ expression_list :
 
 expression_tail :
     expression expression_tail
-    | expression
+    | %empty
     ;
 
 expression : 
-    expression OP_NOT or_op_res
+    OP_NOT or_op_res
     | or_op_res
     ;
 
@@ -234,13 +227,25 @@ factor :
     NUM_INT
     | NUM_FLOAT
     | STRING
-    | ID
+    | var
     | MK_LPAREN expression MK_RPAREN
     | function_call
+    ;
+
+var :
+    ID
     | array
+    | struct_ref
     ;
 
 array: ID reference_bracket_chain
+    ;
+
+struct_ref :
+    ID MK_DOT ID
+    | ID MK_DOT array
+    | array MK_DOT ID
+    | array MK_DOT array
 
 add_op :
     OP_PLUS
@@ -291,6 +296,7 @@ main (argc, argv)
 int argc;
 char *argv[];
   {
+        yydebug = 1;
      	yyin = fopen(argv[1],"r");
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
