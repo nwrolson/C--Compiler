@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 static int linenumber = 1;
+#define YYSTYPE char*
 %}
 
 
@@ -73,6 +74,7 @@ global_decl	:
 
 function_decl	:
     type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
+    | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
 		;
 
 parameter_list : parameter parameter_tail
@@ -282,7 +284,7 @@ for_statement : FOR MK_LPAREN assignment_statement expression_statement
      assignment MK_RPAREN MK_LBRACE block MK_RBRACE
     ;
 
-while_statement : WHILE MK_LPAREN expression MK_RPAREN MK_LBRACE block MK_RBRACE
+while_statement : WHILE MK_LPAREN expression_list MK_RPAREN MK_LBRACE block MK_RBRACE
     ;
 
 
