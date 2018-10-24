@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "symboltable.h"
 static int linenumber = 1;
 #define YYSTYPE char*
 %}
@@ -101,10 +102,23 @@ block :
 decl : 
     type id_list MK_SEMICOLON
     | type ID OP_ASSIGN expression MK_SEMICOLON
-    /*Is int i=0, j, k; a valid statement?*/
     | typedef
     | struct_def
     ;
+
+/*
+decl :
+    INT ID MK_SEMICOLON
+        {
+            printf("Read: %s\n", $2);
+            insert_id($2);
+            getnode($2) -> return_type = tINT;
+        }
+    | FLOAT ID MK_SEMICOLON
+    | typedef
+    | struct_def
+    ;
+*/
 
 bracket_chain : 
     MK_LB NUM_INT MK_RB bracket_chain
@@ -231,7 +245,7 @@ factor :
     ;
 
 var :
-    ID
+    ID {printf("In parser: %s\n", $1);}
     | array
     | struct_ref
     ;
@@ -295,6 +309,7 @@ int argc;
 char *argv[];
   {
      	yyin = fopen(argv[1],"r");
+        init_symtab();
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
   } 
