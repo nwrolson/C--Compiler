@@ -15,7 +15,11 @@ typedef struct node* ptr;
 #define tINT_ARR 3
 #define tFLOAT_ARR 4
 #define tCHAR 5
-ptr symtab[TABLESIZE];
+
+typedef struct scope {
+    ptr* symtab;
+    struct scope *parent;
+} scope;
 
 struct com_node{	/* Structure for Comments */
     char *com;
@@ -28,10 +32,11 @@ struct com_node *comtab,*curcom;
 int hash(char *key);
 ptr getnode(char *text);
 struct com_node* getcomment(char *str);
-void init_symtab();
-void insert_id(char *text);
-void print_symtab();
-void cleanup_symtab();
+scope* init_scope();
+ptr insert_id(scope* s, char *text);
+ptr search_id(scope* s, char *text);
+void print_symtab(scope* s);
+void cleanup_symtab(scope* s);
 void init_comtab();
 void insert_comment(char *comment);
 void print_comtab();

@@ -1,9 +1,12 @@
-Main: symbol_table.h symbol_table.c Lex
-	gcc lex.yy.c symbol_table.c -ll -lm -w -o parser
+Main: symboltable.h symboltable.c Lex Bison
+	gcc parser.tab.c symboltable.c -ll -o parser
 
 Lex:
-	flex symbol_parser.lex
+	flex lexer.lex
+
+Bison:
+	bison parser.y
 
 clean:
-	rm lex.yy.c && rm parser
+	rm lex.yy.c && rm parser && rm parser.tab.c
 

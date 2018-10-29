@@ -6,6 +6,8 @@
 #include <string.h>
 #include "symboltable.h"
 static int linenumber = 1;
+static int current_type = 0;
+static scope* current_scope;
 #define YYSTYPE char*
 %}
 
@@ -99,20 +101,29 @@ block :
     | %empty
     ;
 
-decl : 
+ decl : 
     type id_list MK_SEMICOLON
+    {
+        current_type = $1;
+    }
     | type ID OP_ASSIGN expression MK_SEMICOLON
+    {
+	ptr id = insert_id(current_scope, $2);
+	id->return_type = $1;	
+	//printf("declaration!\n");
+    }
     | typedef
     | struct_def
     ;
+
 
 /*
 decl :
     INT ID MK_SEMICOLON
         {
             printf("Read: %s\n", $2);
-            insert_id($2);
-            getnode($2) -> return_type = tINT;
+            ptr id = insert_id(current_scope, $2);
+            id->return_type = tINT;
         }
     | FLOAT ID MK_SEMICOLON
     | typedef
@@ -127,17 +138,25 @@ bracket_chain :
 
 
 id_list : ID bracket_chain id_tail
+    {
+        ptr id = insert_id(current_scope, $1);
+	//printf("id_list: %s\n", $1);
+        // insert type
+    }
     ;
 
 id_tail :
     MK_COMMA ID bracket_chain id_tail
+    {
+	ptr id = insert_id(current_scope, $2);
+    }
     | %empty
     ;
 
 type :
-    INT
-    | FLOAT 
-    | VOID
+    INT 	{ $$ = tINT; }
+    | FLOAT 	{ $$ = tFLOAT; }
+    | VOID	{ $$ = tVOID; }
     ;
 
 typedef : TYPEDEF type ID MK_SEMICOLON
@@ -309,7 +328,7 @@ int argc;
 char *argv[];
   {
      	yyin = fopen(argv[1],"r");
-        init_symtab();
+        current_scope = init_scope();
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
   } 

@@ -37,20 +37,22 @@ struct com_node* getcomment(char *str)	/* Put comment into Comment Table */
     return tmp;
 }
 
-void init_symtab()	/* Initialize Symbol Table */
+scope* init_scope()	/* Creates a new scope */
 {
-    int i;
-    for(i=0;i<TABLESIZE;i++)
-        symtab[i]=NULL;
-    return;
+    scope* new_scope = malloc(sizeof(scope));
+    new_scope->symtab = calloc((size_t) TABLESIZE, sizeof(ptr));
+    new_scope->parent = NULL;
+    return new_scope;
 }
 
-void insert_id(char *text)	/* Populate Symbol Table */
+ptr insert_id(scope* s, char *text)	/* Populate Symbol Table */
 {
-    int val=hash(text);
-    ptr p=symtab[val],q;
-    if(p==NULL)    //insert new element
-        symtab[val]=getnode(text);
+    int val = hash(text);
+    ptr p = s->symtab[val],q;
+    if(p==NULL) {    //insert new element
+        s->symtab[val]=getnode(text);
+    	return s->symtab[val];
+    }
     else{
         while(p!=NULL && strcmp(p->id,text)){
             q=p;
@@ -60,17 +62,36 @@ void insert_id(char *text)	/* Populate Symbol Table */
             q->next=getnode(text);
         else
             p->freq++; 
-    }
-    return;
+	}
+    return p;
 }
 
-void print_symtab()	/* Print Symbol Table */
+ptr search_id(scope* s, char *text) {
+    int i;
+    for (i = TABLESIZE; i < TABLESIZE; i++) {
+        if (strcmp(s->symtab[i]->id, text) == 0) {
+	    return s->symtab[i];
+	}
+        else {
+	    ptr next = s->symtab[i]->next;
+            while (next != NULL) {
+	        if (strcmp(next->id, text) == 0) {
+		    return next;
+		}
+		else next = next->next;
+	    }
+	}	
+    }
+    return NULL;
+}
+
+void print_symtab(scope* s)	/* Print Symbol Table */
 {
     ptr p;
     int i;
     printf("Frequency of identifiers:\n");
     for(i=0;i<TABLESIZE;i++){
-        p=symtab[i];
+        p=s->symtab[i];
         while(p!=NULL){
             printf("%s %d\n",p->id,p->freq);
             p=p->next;
@@ -79,12 +100,12 @@ void print_symtab()	/* Print Symbol Table */
     return;
 }
 
-void cleanup_symtab()	/* Clean Symbol Table */
+void cleanup_symtab(scope* s)	/* Clean Symbol Table */
 {
     int i;
     ptr p,q;
     for(i=0;i<TABLESIZE;i++){
-        p=symtab[i];
+        p=s->symtab[i];
         while(p){
             q=p->next;
             free(p);
