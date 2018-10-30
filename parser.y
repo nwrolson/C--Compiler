@@ -10,6 +10,15 @@ static char* current_type = tERROR;
 static scope* current_scope;
 static scope* global;
 char* out;
+struct const_type{
+  int con_type;         /*0: Int, 1: Float, -1: String*/
+  union {
+    int ival;
+    float fval;
+    char *sc;
+  } const_u;
+};
+
 %}
 
 %union {
@@ -475,21 +484,6 @@ while_statement : WHILE MK_LPAREN expression_list MK_RPAREN MK_LBRACE block MK_R
 
 %%
 #include "lex.yy.c"
-
-struct const_type{
-  int con_type;         /*0: Int, 1: Float, -1: String*/
-  union {
-    int ival;
-    float fval;
-    char *sc;
-  } const_u;
-};
-
-struct idPassing_type{
-    char* id;
-    char* lst;
-} idPass_type;
-
 main (argc, argv)
 int argc;
 char *argv[];
