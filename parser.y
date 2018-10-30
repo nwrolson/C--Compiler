@@ -10,6 +10,19 @@ static char* current_type = tERROR;
 static scope* current_scope;
 static scope* global;
 char* out;
+struct const_type{
+  int con_type;         /*0: Int, 1: Float, -1: String*/
+  union {
+    int ival;
+    float fval;
+    char *sc;
+  } const_u;
+};
+
+struct var_type{
+    char *type;
+    int arr;
+};
 %}
 
 %union {
@@ -18,22 +31,23 @@ char* out;
     char* s;
     struct const_type *con_pt;
     char* ID_list;
-    char* type;
+    struct var_type *t;
     int num_args;
+    int arr_dim;
 }
 
 %token <s> ID
 %token <i> NUM_INT
 %token <f> NUM_FLOAT
 %token <s> STRING
-%token <type> VOID    
-%token <type> INT     
-%token <type> FLOAT   
+%token <t> VOID    
+%token <t> INT     
+%token <t> FLOAT   
 %token IF      
 %token ELSE    
 %token WHILE   
 %token FOR
-%token <type> STRUCT  
+%token <t> STRUCT  
 %token TYPEDEF 
 %token <s> OP_ASSIGN  
 %token <s> OP_OR   
@@ -64,12 +78,14 @@ char* out;
 
 %token COMMENT
 
-%type<type> type var factor unary_op_res mul_op_res add_op_res comp_op_res
+%type<t> type var factor unary_op_res mul_op_res add_op_res comp_op_res
             and_op_res expression function_call
 %type<ID_list> id_list id_tail
 
 /*Use num_args to get number of arguments in function declaration and call*/
 %type<num_args> parameter_list parameter_tail expression_list expression_tail
+
+%type<arr_dim> bracket_chain parameter_bracket_chain
 
 /*Use s to get operators*/
 %type<s> comp_op add_op mul_op
@@ -100,28 +116,28 @@ function_decl	:
     /*TODO:Add return type checking*/
     type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block RETURN MK_SEMICOLON MK_RBRACE
         {
-            if(strcmp($1, "VOID")!=0){
+            if(strcmp($1->type, "VOID")!=0){
                 printf("Incompatible return type\n");
             } else {
                 ptr p = insert_id(global, $2);
-                strcpy(p->return_type, $1);
+                strcpy(p->return_type, $1->type);
                 p->arg_num = $4;
             }
         }
     |type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block RETURN expression MK_SEMICOLON MK_RBRACE
         {
-            if(strcmp($1, $9)!=0){
+            if(strcmp($1->type, $9->type)!=0){
                 printf("Incompatible return type\n");
             } else {
                 ptr p = insert_id(global, $2);
-                strcpy(p->return_type, $1);
+                strcpy(p->return_type, $1->type);
                 p->arg_num = $4;
             }
         }
     | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
         {
             ptr p = insert_id(global, $2);
-            strcpy(p->return_type, $1);
+            strcpy(p->return_type, $1->type);
             p->arg_num = $4;
         }
 		;
@@ -142,12 +158,19 @@ parameter_tail :
 parameter : type ID parameter_bracket_chain
             {
                 ptr p = insert_id(global, $2);
-                strcpy(p->return_type, $1);
+                strcpy(p->return_type, $1->type);
             }
 
 parameter_bracket_chain : 
     MK_LB MK_RB bracket_chain
-    | bracket_chain
+        {
+            if($3<1){
+                $$ = -1;
+            } else {
+                $$ = 1 + $3;
+            }
+        }
+    | bracket_chain {$$ = $1;}
     ;
 
 block : 
@@ -172,18 +195,19 @@ block :
     type ID bracket_chain MK_SEMICOLON
         {
             ptr p = insert_id(global, $2);
-            strcpy(p-> return_type, $1);
+            strcpy(p-> return_type, $1->type);
+            p->arr_dim = $3;
         }
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
            // printf("Id to be inserted: %s\n", $2 );
-            if(strcmp($1, $3)!=0
-                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
-                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
+            if(strcmp($1->type, $4->type)!=0
+                &&((strcmp($1->type, "INT")!=0&&strcmp($1->type, "FLOAT")!=0))
+                 ||(strcmp($4->type, "INT")!=0&&strcmp($4->type, "FLOAT")!=0)){
                 printf("Incompatible type\n");
             } else {
                 ptr p = insert_id(global, $2);
-                strcpy(p-> return_type, $1);
+                strcpy(p-> return_type, $1->type);
 	            //printf("declaration!\n");
             }
         }
@@ -193,8 +217,16 @@ block :
     ;
 
 bracket_chain : 
-    MK_LB NUM_INT MK_RB bracket_chain
-    | %empty
+    MK_LB expression MK_RB bracket_chain
+        {
+            if(strcmp($2->type, "INT")!=0){
+                printf("Array subscript is not an integer\n");
+                $$=-1;
+            } else {
+                $$ = 1 + $4;
+            }
+        }
+    | %empty {$$ = 0;}
     ;
 
 
@@ -266,11 +298,11 @@ assignment_statement: assignment MK_SEMICOLON
 
 assignment: var OP_ASSIGN expression
          {
-             if(strcmp($1, $3)!=0
-                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
-                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
-                 printf("Incompatible types %s and %s\n", $1, $3);
-             } 
+             if(strcmp($1->type, $3->type)!=0
+                &&((strcmp($1->type, "INT")!=0&&strcmp($1->type, "FLOAT")!=0))
+                 ||(strcmp($3->type, "INT")!=0&&strcmp($3->type, "FLOAT")!=0)){
+                 printf("Incompatible types %s and %s\n", $1->type, $3->type);
+             }
          }
     ;
 
@@ -286,15 +318,15 @@ function_call : ID MK_LPAREN expression_list MK_RPAREN
                     ptr p = search_id(global, $1);
                     if(p==NULL){
                         printf("Function '%s' not found.\n", $1);
-                        $$=tERROR;
+                        $$->type=tERROR;
                     }else if (p->arg_num>$3){
                         printf("Too few arguments to function.\n");
-                        $$=tERROR;
+                        $$->type=tERROR;
                     }else if (p-> arg_num<$3){
                         printf("Too many arguments to function.\n");
-                        $$=tERROR;
+                        $$->type=tERROR;
                     }else{
-                        $$ = p->return_type;
+                        strcpy($$->type, p -> return_type);
                     }
                 }
     ;
@@ -312,11 +344,11 @@ expression_tail :
 expression : 
     expression OP_OR and_op_res
         {
-            if(strcmp($1, "INT")!=0 || strcmp($3, "INT")!=0){
-                $$=tERROR;
+            if(strcmp($1->type, "INT")!=0 || strcmp($3->type, "INT")!=0){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $2);
             }
-            else {$$ = tINT;}
+            else {$$->type = tINT;}
         }
     | and_op_res {$$ = $1;}
     ;
@@ -324,11 +356,11 @@ expression :
 and_op_res : 
     and_op_res OP_AND comp_op_res
         {
-            if(strcmp($1, "INT")!=0 || strcmp($3, "INT")!=0){
-                $$=tERROR;
+            if(strcmp($1->type, "INT")!=0 || strcmp($3->type, "INT")!=0){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $2);
             }
-            else {$$ = tINT;}
+            else {$$->type = tINT;}
         }
     | comp_op_res {$$ = $1;}
     ;
@@ -336,11 +368,11 @@ and_op_res :
 comp_op_res : 
     comp_op_res comp_op add_op_res
         {
-            if(strcmp($1, $3) != 0){
-                $$=tERROR;
+            if(strcmp($1->type, $3->type) != 0){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $2);
             }
-            else {$$ = tINT;}
+            else {$$->type = tINT;}
         }
     | add_op_res {$$ = $1;}
     ;
@@ -348,13 +380,13 @@ comp_op_res :
 add_op_res : 
     add_op_res add_op mul_op_res
         {
-            if((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0)
-            ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
-                $$=tERROR;
+            if((strcmp($1->type, "INT")!=0&&strcmp($1->type, "FLOAT")!=0)
+            ||(strcmp($3->type, "INT")!=0&&strcmp($3->type, "FLOAT")!=0)){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $2);
             }
-            else if (strcmp($1, $3) != 0){
-                $$=tFLOAT;
+            else if (strcmp($1->type, $3->type) != 0){
+                $$->type=tFLOAT;
             }
             else {$$ = $1;}
         }
@@ -364,13 +396,13 @@ add_op_res :
 mul_op_res :
     mul_op_res mul_op unary_op_res
         {
-            if((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0)
-            ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
-                $$=tERROR;
+            if((strcmp($1->type, "INT")!=0&&strcmp($1->type, "FLOAT")!=0)
+            ||(strcmp($3->type, "INT")!=0&&strcmp($3->type, "FLOAT")!=0)){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $2);
             }
-            else if (strcmp($1, $3) != 0){
-                $$=tFLOAT;
+            else if (strcmp($1->type, $3->type) != 0){
+                $$->type=tFLOAT;
             }
             else {$$ = $1;}
         }
@@ -380,16 +412,16 @@ mul_op_res :
 unary_op_res :
     OP_MINUS factor
         {
-            if(strcmp($2, "INT")!=0 && strcmp($2, "FLOAT")!=0){
-                $$=tERROR;
+            if(strcmp($2->type, "INT")!=0 && strcmp($2->type, "FLOAT")!=0){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $1);
             }
             else {$$ = $2;}
         }
     | OP_NOT factor
         {
-            if(strcmp($2, "INT")!= 0){
-                $$=tERROR;
+            if(strcmp($2->type, "INT")!= 0){
+                $$->type=tERROR;
                 printf("Invalid operand to %s\n", $1);
             }
             else{$$ = $2;}
@@ -398,27 +430,27 @@ unary_op_res :
         {$$ = $1;}
 
 factor : 
-    NUM_INT {$$ = tINT;}
-    | NUM_FLOAT {$$ = tFLOAT;}
-    | STRING {$$ = tCHAR;}
-    | var {$$ = $1;}
+    NUM_INT {$$->type = tINT;}
+    | NUM_FLOAT {$$->type = tFLOAT;}
+    | STRING {$$->type = tCHAR;}
+    | var {$$= $1;}
     | MK_LPAREN expression MK_RPAREN {$$ = $2;}
-    | function_call {$$ = tTEMP;}
+    | function_call {$$->type = tTEMP;}
     ;
 
 var :
     ID  {
             ptr p = search_id(global, $1);
             if (p == NULL){
-                $$ = tERROR;
+                $$->type = tERROR;
                 printf("Variable '%s' not found.\n", $1);
             } else {
-                $$ = p-> return_type;
+                $$->type = p-> return_type;
             }
         }
     /*TODO:Make array and struct types work*/
-    | array {$$ = tTEMP;}
-    | struct_ref {$$ = tTEMP;}
+    | array {$$->type = tTEMP;}
+    | struct_ref {$$->type = tTEMP;}
     ;
 
 array: ID reference_bracket_chain
@@ -475,21 +507,6 @@ while_statement : WHILE MK_LPAREN expression_list MK_RPAREN MK_LBRACE block MK_R
 
 %%
 #include "lex.yy.c"
-
-struct const_type{
-  int con_type;         /*0: Int, 1: Float, -1: String*/
-  union {
-    int ival;
-    float fval;
-    char *sc;
-  } const_u;
-};
-
-struct idPassing_type{
-    char* id;
-    char* lst;
-} idPass_type;
-
 main (argc, argv)
 int argc;
 char *argv[];

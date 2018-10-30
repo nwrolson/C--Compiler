@@ -1,7 +1,8 @@
 struct node{	/* Structure for Identifiers */
     char id[257];
     int freq;
-    int arg_num;	/*# of Arguments in the function*/
+    int arg_num;	        /*# of Arguments in the function*/
+    int arr_dim;            /*Dimensions of array*/
     char return_type[257];	/*Return type of the function*/
     struct node *next;
 };
