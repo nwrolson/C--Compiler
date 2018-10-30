@@ -2,19 +2,20 @@ struct node{	/* Structure for Identifiers */
     char id[257];
     int freq;
     int arg_num;	/*# of Arguments in the function*/
-    int return_type;	/*Return type of the function*/
+    char return_type[257];	/*Return type of the function*/
     struct node *next;
 };
 
 typedef struct node* ptr;
 
 #define TABLESIZE 100
-#define tVOID 0
-#define tINT 1
-#define tFLOAT 2
-#define tINT_ARR 3
-#define tFLOAT_ARR 4
-#define tCHAR 5
+#define tVOID "VOID"
+#define tINT "INT"
+#define tFLOAT "FLOAT"
+#define tINTARR "INTARR"
+#define tFLOATARR "FLOATARR"
+#define tCHAR "CHAR"
+#define tERROR "ERROR"
 
 typedef struct scope {
     ptr* symtab;

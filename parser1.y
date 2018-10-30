@@ -4,34 +4,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "symboltable.h"
 static int linenumber = 1;
-static char* current_type = tERROR;
-static scope* current_scope;
-static scope* global;
 %}
 
-%union {
-    int i;
-    float f;
-    char* s;
-    struct const_type *con_pt;
-    char* ID_list;
-    char* type;
-}
 
-%token <s> ID
-%token <i> NUM_INT
-%token <f> NUM_FLOAT
-%token <s> STRING
-%token <type> VOID    
-%token <type> INT     
-%token <type> FLOAT   
+%token ID
+%token NUM_INT
+%token NUM_FLOAT
+%token STRING
+%token VOID    
+%token INT     
+%token FLOAT   
 %token IF      
 %token ELSE    
 %token WHILE   
 %token FOR
-%token <type> STRUCT  
+%token STRUCT  
 %token TYPEDEF 
 %token OP_ASSIGN  
 %token OP_OR   
@@ -61,9 +49,6 @@ static scope* global;
 
 %token COMMENT
 
-%type<type> type
-%type<ID_list> id_list id_tail
-
 %start program
 
 %%
@@ -73,7 +58,7 @@ static scope* global;
 
 /* Declarations */
 
-program	: global_decl_list 
+program	: global_decl_list
 		;
 
 global_decl_list :
@@ -88,13 +73,6 @@ global_decl	:
 
 function_decl	:
     type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
-        {
-            //insert_id(global, $2)->return_type = $1;
-        }
-    | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
-        {
-            //insert_id(global, $2)->return_type = $1;
-        }
 		;
 
 parameter_list : parameter parameter_tail
@@ -118,43 +96,13 @@ block :
     | %empty
     ;
 
- decl : 
+decl : 
     type id_list MK_SEMICOLON
-    {
-        char* token;
-        token = strtok($2, ",");
-        printf("Type: %s\n", $1);
-        printf("Full id_list: %s\n", $2);
-       /* while(token!=NULL){
-            ptr p = insert_id(global, token);
-            printf("Inserted %s\n", token);
-            strcpy($1, p->return_type);
-            token = strtok(NULL,",");
-        }*/
-    }
     | type ID OP_ASSIGN expression MK_SEMICOLON
-        {
-            strcpy($1, insert_id(global, $2)->return_type);
-	        //printf("declaration!\n");
-        }
+    /*Is int i=0, j, k; a valid statement?*/
     | typedef
     | struct_def
     ;
-
-
-/*
-decl :
-    INT ID MK_SEMICOLON
-        {
-            printf("Read: %s\n", $2);
-            ptr id = insert_id(current_scope, $2);
-            id->return_type = tINT;
-        }
-    | FLOAT ID MK_SEMICOLON
-    | typedef
-    | struct_def
-    ;
-*/
 
 bracket_chain : 
     MK_LB NUM_INT MK_RB bracket_chain
@@ -163,25 +111,16 @@ bracket_chain :
 
 
 id_list : ID bracket_chain id_tail
-    {
-        strcpy($$, $1);
-	    printf("id_head: %s\n", $$);
-    }
     ;
 
 id_tail :
     MK_COMMA ID bracket_chain id_tail
-    {
-        printf("id: %s\n", $2);
-        strcat($$, ",");
-        strcat($$, $2);
-    }   
-    | %empty {strcat($$, "");}
+    | %empty
     ;
 
 type :
     INT
-    | FLOAT
+    | FLOAT 
     | VOID
     ;
 
@@ -343,37 +282,20 @@ for_statement : FOR MK_LPAREN assignment_statement expression_statement
      assignment MK_RPAREN MK_LBRACE block MK_RBRACE
     ;
 
-while_statement : WHILE MK_LPAREN expression_list MK_RPAREN MK_LBRACE block MK_RBRACE
+while_statement : WHILE MK_LPAREN expression MK_RPAREN MK_LBRACE block MK_RBRACE
     ;
 
 
 %%
 #include "lex.yy.c"
-
-struct const_type{
-  int con_type;         /*0: Int, 1: Float, -1: String*/
-  union {
-    int ival;
-    float fval;
-    char *sc;
-  } const_u;
-};
-
-struct idPassing_type{
-    char* id;
-    char* lst;
-} idPass_type;
-
 main (argc, argv)
 int argc;
 char *argv[];
   {
      	yyin = fopen(argv[1],"r");
-        global = init_scope();
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
-        print_symtab(global);
-  }
+  } 
 yyerror (mesg)
 char *mesg;
 {

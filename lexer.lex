@@ -54,9 +54,18 @@ error    .
 
 {ws}            ;   /* do nothing with whitespace */
 {comment}	;
-{kwInt}         return INT;
-{kwFloat}       return FLOAT;
-{kwVoid}	return VOID;
+{kwInt}         {
+                    yylval.type = tINT;
+                    return INT;
+                }
+{kwFloat}       {
+                    yylval.type = tFLOAT;
+                    return FLOAT;
+                }
+{kwVoid}	    {
+                    yylval.type = tVOID;
+                    return VOID;
+                }
 {kwIf}          return IF;
 {kwElse}        return ELSE;
 {kwWhile}       return WHILE;
@@ -66,9 +75,8 @@ error    .
 {kwTypedef}     return TYPEDEF;
 {kwReturn}      return RETURN;
 {ID}            {
-                   printf("From lexer: %s\n", yytext);
-                   yylval = yytext;
-                   return ID;
+                    yylval.s = strdup(yytext);
+                    return ID;
                 }
 {op_assign}     return OP_ASSIGN; 
 {op_and}        return OP_AND;
