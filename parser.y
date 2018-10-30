@@ -96,14 +96,12 @@ function_decl	:
         {
             ptr p = insert_id(global, $2);
             strcpy(p->return_type, $1);
-            printf("Parameter count: %d/n", $4);
             p->arg_num = $4;
         }
     | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
         {
             ptr p = insert_id(global, $2);
             strcpy(p->return_type, $1);
-            printf("Parameter count: %d\n", $4);
             p->arg_num = $4;
         }
 		;
@@ -122,6 +120,10 @@ parameter_tail :
     | %empty{$$ = 0;};
 
 parameter : type ID parameter_bracket_chain
+            {
+                ptr p = insert_id(global, $2);
+                strcpy(p->return_type, $1);
+            }
 
 parameter_bracket_chain : 
     MK_LB MK_RB bracket_chain
@@ -136,6 +138,8 @@ block :
     ;
 
  decl : 
+    /* //TEMPORARY COMMENTED OUT UNTIL PROBLEM OF PASSING AN
+       //ID LIST IS SOLVED
     type id_list MK_SEMICOLON
     {
         //TODO: Fix this
@@ -144,13 +148,12 @@ block :
         printf("Type: %s\n", $1);
         printf("Full id_list: %s\n", $2);
         printf("Out: %s\n", out);
-       /* while(token!=NULL){
-            ptr p = insert_id(global, token);
-            printf("Inserted %s\n", token);
-            strcpy($1, p->return_type);
-            token = strtok(NULL,",");
-        }*/
-    }
+    }*/
+    type ID bracket_chain MK_SEMICOLON
+        {
+            ptr p = insert_id(global, $2);
+            strcpy(p-> return_type, $1);
+        }
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
            // printf("Id to be inserted: %s\n", $2 );
@@ -165,21 +168,6 @@ block :
     | typedef
     | struct_def
     ;
-
-
-/*
-decl :
-    INT ID MK_SEMICOLON
-        {
-            printf("Read: %s\n", $2);
-            ptr id = insert_id(current_scope, $2);
-            id->return_type = tINT;
-        }
-    | FLOAT ID MK_SEMICOLON
-    | typedef
-    | struct_def
-    ;
-*/
 
 bracket_chain : 
     MK_LB NUM_INT MK_RB bracket_chain
@@ -257,6 +245,11 @@ assignment_statement: assignment MK_SEMICOLON
     ;
 
 assignment: var OP_ASSIGN expression
+            {
+                if(($1!=$3)){ //TODO: Numeric types can be added
+                    printf("Incompatible type\n");
+                } 
+            }
     ;
 
 reference_bracket_chain:

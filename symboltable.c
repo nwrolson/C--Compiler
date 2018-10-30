@@ -93,7 +93,8 @@ void print_symtab(scope* s)	/* Print Symbol Table */
     for(i=0;i<TABLESIZE;i++){
         p=s->symtab[i];
         while(p!=NULL){
-            printf("%s %d\n",p->id,p->freq);
+            printf("ID:%s Freq:%d Type:%s Args:%d\n",
+                    p->id,p->freq, p->return_type, p->arg_num);
             p=p->next;
         }
     }
