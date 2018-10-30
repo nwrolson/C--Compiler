@@ -17,6 +17,7 @@ kwStruct "struct"
 kwUnion  "union"
 kwTypedef "typedef"
 kwReturn "return"
+kwConst "const"
 
 ID       ({letter})({letter}|{digit}|"_")*
 op_assign        "="
@@ -70,10 +71,11 @@ error    .
 {kwElse}        return ELSE;
 {kwWhile}       return WHILE;
 {kwFor}      	return FOR;
-{kwStruct}	return STRUCT;
-{kwUnion}	return STRUCT;
+{kwStruct}	    return STRUCT;
+{kwUnion}	    return STRUCT;
 {kwTypedef}     return TYPEDEF;
 {kwReturn}      return RETURN;
+{kwConst}       return CONST;
 {ID}            {
                     yylval.s = strdup(yytext);
                     return ID;

@@ -60,6 +60,7 @@ char* out;
 %token MK_DOT  
 %token ERROR
 %token RETURN
+%token CONST
 
 %token COMMENT
 
@@ -172,6 +173,7 @@ block :
 	            //printf("declaration!\n");
             }
         }
+    | CONST type ID OP_ASSIGN expression MK_SEMICOLON
     | typedef
     | struct_def
     ;
