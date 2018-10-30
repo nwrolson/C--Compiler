@@ -78,23 +78,65 @@ error    .
                     yylval.s = strdup(yytext);
                     return ID;
                 }
-{op_assign}     return OP_ASSIGN; 
-{op_and}        return OP_AND;
-{op_or}         return OP_OR;
-{op_not}        return OP_NOT;
-{op_eq}         return OP_EQ;
-{op_ne}         return OP_NE;
-{op_lt}         return OP_LT;
-{op_gt}         return OP_GT;
-{op_le}         return OP_LE;
-{op_ge}         return OP_GE;
-{op_plus}       return OP_PLUS;
-{op_minus}      return OP_MINUS;
-{op_times}      return OP_TIMES;
-{op_divide}     return OP_DIVIDE;
+{op_assign}     {
+                    yylval.s = strdup(yytext);
+                    return OP_ASSIGN;
+                }
+{op_and}        {
+                    yylval.s = strdup(yytext);
+                    return OP_AND;
+                }
+{op_or}         {
+                    yylval.s = strdup(yytext);
+                    return OP_OR;
+                }
+{op_not}        {
+                    yylval.s = strdup(yytext);
+                    return OP_NOT;
+                }
+{op_eq}         {
+                    yylval.s = strdup(yytext);
+                    return OP_EQ;
+                }
+{op_ne}         {
+                    yylval.s = strdup(yytext);
+                    return OP_NE;
+                }
+{op_lt}         {
+                    yylval.s = strdup(yytext);
+                    return OP_LT;
+                }
+{op_gt}         {
+                    yylval.s = strdup(yytext);
+                    return OP_GT;
+                }
+{op_le}         {
+                    yylval.s = strdup(yytext);
+                    return OP_LE;
+                }
+{op_ge}         {
+                    yylval.s = strdup(yytext);
+                    return OP_GE;
+                }
+{op_plus}       {
+                    yylval.s = strdup(yytext);
+                    return OP_PLUS;
+                }
+{op_minus}      {
+                    yylval.s = strdup(yytext);
+                    return OP_MINUS;
+                }
+{op_times}      {
+                    yylval.s = strdup(yytext);
+                    return OP_TIMES;
+                }
+{op_divide}     {
+                    yylval.s = strdup(yytext);
+                    return OP_DIVIDE;
+                }
 {integer}       {  return NUM_INT;}
 {float}         {  return NUM_FLOAT;}
-{s-const}        {  return STRING;}
+{s-const}       {  return STRING;}
 {mk_lparen}     return MK_LPAREN;
 {mk_rparen}     return MK_RPAREN;
 {mk_lbrace}     return MK_LBRACE;

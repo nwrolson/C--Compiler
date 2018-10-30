@@ -35,20 +35,20 @@ char* out;
 %token FOR
 %token <type> STRUCT  
 %token TYPEDEF 
-%token OP_ASSIGN  
-%token OP_OR   
-%token OP_AND  
-%token OP_NOT  
-%token OP_EQ   
-%token OP_NE   
-%token OP_GT   
-%token OP_LT   
-%token OP_GE   
-%token OP_LE   
-%token OP_PLUS 
-%token OP_MINUS        
-%token OP_TIMES        
-%token OP_DIVIDE       
+%token <s> OP_ASSIGN  
+%token <s> OP_OR   
+%token <s> OP_AND  
+%token <s> OP_NOT  
+%token <s> OP_EQ   
+%token <s> OP_NE   
+%token <s> OP_GT   
+%token <s> OP_LT   
+%token <s> OP_GE   
+%token <s> OP_LE   
+%token <s> OP_PLUS 
+%token <s> OP_MINUS        
+%token <s> OP_TIMES        
+%token <s> OP_DIVIDE       
 %token MK_LB 
 %token MK_RB 
 %token MK_LPAREN       
@@ -66,7 +66,12 @@ char* out;
 %type<type> type var factor unary_op_res mul_op_res add_op_res comp_op_res
             and_op_res expression
 %type<ID_list> id_list id_tail
+
+/*Use num_args to get number of arguments in function*/
 %type<num_args> parameter_list parameter_tail
+
+/*Use s to get operators*/
+%type<s> comp_op add_op mul_op
 
 %start program
 
@@ -157,7 +162,9 @@ block :
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
            // printf("Id to be inserted: %s\n", $2 );
-            if(($1!=$4)){ //TODO: Numeric types can be added
+            if(strcmp($1, $3)!=0
+                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
+                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
                 printf("Incompatible type\n");
             } else {
                 ptr p = insert_id(global, $2);
@@ -245,11 +252,13 @@ assignment_statement: assignment MK_SEMICOLON
     ;
 
 assignment: var OP_ASSIGN expression
-            {
-                if(($1!=$3)){ //TODO: Numeric types can be added
-                    printf("Incompatible type\n");
-                } 
-            }
+         {
+             if(strcmp($1, $3)!=0
+                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
+                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
+                 printf("Incompatible types %s and %s\n", $1, $3);
+             } 
+         }
     ;
 
 reference_bracket_chain:
@@ -275,10 +284,9 @@ expression_tail :
 expression : 
     expression OP_OR and_op_res
         {
-            if($1!=tINT || $3!=tINT){
+            if(strcmp($1, "INT")!=0 || strcmp($3, "INT")!=0){
                 $$=tERROR;
-                //TODO: Add operator symbols
-                printf("Invalid operand to ||\n");
+                printf("Invalid operand to %s\n", $2);
             }
             else {$$ = tINT;}
         }
@@ -288,10 +296,9 @@ expression :
 and_op_res : 
     and_op_res OP_AND comp_op_res
         {
-            if($1!=tINT || $3!=tINT){
+            if(strcmp($1, "INT")!=0 || strcmp($3, "INT")!=0){
                 $$=tERROR;
-                //TODO: Add operator symbols
-                printf("Invalid operand to &&\n");
+                printf("Invalid operand to %s\n", $2);
             }
             else {$$ = tINT;}
         }
@@ -301,10 +308,9 @@ and_op_res :
 comp_op_res : 
     comp_op_res comp_op add_op_res
         {
-            if($1!=$3){
+            if(strcmp($1, $3) != 0){
                 $$=tERROR;
-                //TODO: Add operator symbols
-                printf("Invalid operand to comp_op\n");
+                printf("Invalid operand to %s\n", $2);
             }
             else {$$ = tINT;}
         }
@@ -314,12 +320,12 @@ comp_op_res :
 add_op_res : 
     add_op_res add_op mul_op_res
         {
-            if(($1!=tFLOAT&&$1!=tINT)||($3!=tFLOAT&&$3!=tINT)){
+            if((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0)
+            ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
                 $$=tERROR;
-                //TODO: Add operator symbols
-                printf("Invalid operand to add_op\n");
+                printf("Invalid operand to %s\n", $2);
             }
-            else if ($1 != $3){
+            else if (strcmp($1, $3) != 0){
                 $$=tFLOAT;
             }
             else {$$ = $1;}
@@ -330,12 +336,12 @@ add_op_res :
 mul_op_res :
     mul_op_res mul_op unary_op_res
         {
-            if(($1!=tFLOAT&&$1!=tINT)||($3!=tFLOAT&&$3!=tINT)){
+            if((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0)
+            ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
                 $$=tERROR;
-                //TODO: Add operator symbols
-                printf("Invalid operand to mul_op\n");
+                printf("Invalid operand to %s\n", $2);
             }
-            else if ($1 != $3){
+            else if (strcmp($1, $3) != 0){
                 $$=tFLOAT;
             }
             else {$$ = $1;}
@@ -346,17 +352,17 @@ mul_op_res :
 unary_op_res :
     OP_MINUS factor
         {
-            if($2!=tFLOAT&&$2!=tINT){
+            if(strcmp($2, "INT")!=0 && strcmp($2, "FLOAT")!=0){
                 $$=tERROR;
-                printf("Invalid operand to -\n");
+                printf("Invalid operand to %s\n", $1);
             }
             else {$$ = $2;}
         }
     | OP_NOT factor
         {
-            if($2!=tINT){
+            if(strcmp($2, "INT")!= 0){
                 $$=tERROR;
-                printf("Invalid operand to !\n");
+                printf("Invalid operand to %s\n", $1);
             }
             else{$$ = $2;}
         }
@@ -373,7 +379,15 @@ factor :
     ;
 
 var :
-    ID {$$ = search_id(global, $1)-> return_type;}
+    ID  {
+            ptr p = search_id(global, $1);
+            if (p == NULL){
+                $$ = tERROR;
+                printf("Variable '%s' not found.\n", $1);
+            } else {
+                $$ = p-> return_type;
+            }
+        }
     /*TODO:Make array and struct types work*/
     | array {$$ = tTEMP;}
     | struct_ref {$$ = tTEMP;}
@@ -454,9 +468,11 @@ char *argv[];
   {
      	yyin = fopen(argv[1],"r");
         global = init_scope();
+        insert_id(global, "Test");
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
         print_symtab(global);
+        cleanup_symtab(global);
   }
 yyerror (mesg)
 char *mesg;
