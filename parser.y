@@ -9,6 +9,7 @@ static int linenumber = 1;
 static char* current_type = tERROR;
 static scope* current_scope;
 static scope* global;
+char* out;
 %}
 
 %union {
@@ -18,6 +19,7 @@ static scope* global;
     struct const_type *con_pt;
     char* ID_list;
     char* type;
+    int num_args;
 }
 
 %token <s> ID
@@ -61,8 +63,10 @@ static scope* global;
 
 %token COMMENT
 
-%type<type> type
+%type<type> type var factor unary_op_res mul_op_res add_op_res comp_op_res
+            and_op_res expression
 %type<ID_list> id_list id_tail
+%type<num_args> parameter_list parameter_tail
 
 %start program
 
@@ -87,22 +91,35 @@ global_decl	:
     ;
 
 function_decl	:
+    /*TODO:Add return type checking*/
     type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
         {
-            //insert_id(global, $2)->return_type = $1;
+            ptr p = insert_id(global, $2);
+            strcpy(p->return_type, $1);
+            printf("Parameter count: %d/n", $4);
+            p->arg_num = $4;
         }
     | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
         {
-            //insert_id(global, $2)->return_type = $1;
+            ptr p = insert_id(global, $2);
+            strcpy(p->return_type, $1);
+            printf("Parameter count: %d\n", $4);
+            p->arg_num = $4;
         }
 		;
 
 parameter_list : parameter parameter_tail
-    | %empty;
+                {
+                    $$ = 1 + $2;
+                }
+    | %empty{$$ = 0;};
 
 parameter_tail : 
     MK_COMMA parameter parameter_tail
-    | %empty;
+        {
+            $$ = 1 + $3;
+        }
+    | %empty{$$ = 0;};
 
 parameter : type ID parameter_bracket_chain
 
@@ -121,10 +138,12 @@ block :
  decl : 
     type id_list MK_SEMICOLON
     {
+        //TODO: Fix this
         char* token;
         token = strtok($2, ",");
         printf("Type: %s\n", $1);
         printf("Full id_list: %s\n", $2);
+        printf("Out: %s\n", out);
        /* while(token!=NULL){
             ptr p = insert_id(global, token);
             printf("Inserted %s\n", token);
@@ -134,8 +153,14 @@ block :
     }
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
-            strcpy($1, insert_id(global, $2)->return_type);
-	        //printf("declaration!\n");
+           // printf("Id to be inserted: %s\n", $2 );
+            if(($1!=$4)){ //TODO: Numeric types can be added
+                printf("Incompatible type\n");
+            } else {
+                ptr p = insert_id(global, $2);
+                strcpy(p-> return_type, $1);
+	            //printf("declaration!\n");
+            }
         }
     | typedef
     | struct_def
@@ -164,7 +189,11 @@ bracket_chain :
 
 id_list : ID bracket_chain id_tail
     {
-        strcpy($$, $1);
+       // strcpy($$, $1);
+        out = malloc(strlen($1)+1);
+        strcpy(out, $1);
+        printf("Out: %s\n", out);
+        $$=out;
 	    printf("id_head: %s\n", $$);
     }
     ;
@@ -252,47 +281,109 @@ expression_tail :
 
 expression : 
     expression OP_OR and_op_res
-    | and_op_res
+        {
+            if($1!=tINT || $3!=tINT){
+                $$=tERROR;
+                //TODO: Add operator symbols
+                printf("Invalid operand to ||\n");
+            }
+            else {$$ = tINT;}
+        }
+    | and_op_res {$$ = $1;}
     ;
 
 and_op_res : 
     and_op_res OP_AND comp_op_res
-    | comp_op_res
+        {
+            if($1!=tINT || $3!=tINT){
+                $$=tERROR;
+                //TODO: Add operator symbols
+                printf("Invalid operand to &&\n");
+            }
+            else {$$ = tINT;}
+        }
+    | comp_op_res {$$ = $1;}
     ;
 
 comp_op_res : 
     comp_op_res comp_op add_op_res
-    | add_op_res 
+        {
+            if($1!=$3){
+                $$=tERROR;
+                //TODO: Add operator symbols
+                printf("Invalid operand to comp_op\n");
+            }
+            else {$$ = tINT;}
+        }
+    | add_op_res {$$ = $1;}
     ;
 
 add_op_res : 
     add_op_res add_op mul_op_res
-    | mul_op_res
+        {
+            if(($1!=tFLOAT&&$1!=tINT)||($3!=tFLOAT&&$3!=tINT)){
+                $$=tERROR;
+                //TODO: Add operator symbols
+                printf("Invalid operand to add_op\n");
+            }
+            else if ($1 != $3){
+                $$=tFLOAT;
+            }
+            else {$$ = $1;}
+        }
+    | mul_op_res {$$=$1;}
     ;
 
 mul_op_res :
     mul_op_res mul_op unary_op_res
-    | unary_op_res
+        {
+            if(($1!=tFLOAT&&$1!=tINT)||($3!=tFLOAT&&$3!=tINT)){
+                $$=tERROR;
+                //TODO: Add operator symbols
+                printf("Invalid operand to mul_op\n");
+            }
+            else if ($1 != $3){
+                $$=tFLOAT;
+            }
+            else {$$ = $1;}
+        }
+    | unary_op_res {$$ = $1;}
     ;
 
 unary_op_res :
     OP_MINUS factor
+        {
+            if($2!=tFLOAT&&$2!=tINT){
+                $$=tERROR;
+                printf("Invalid operand to -\n");
+            }
+            else {$$ = $2;}
+        }
     | OP_NOT factor
+        {
+            if($2!=tINT){
+                $$=tERROR;
+                printf("Invalid operand to !\n");
+            }
+            else{$$ = $2;}
+        }
     | factor
+        {$$ = $1;}
 
 factor : 
-    NUM_INT
-    | NUM_FLOAT
-    | STRING
-    | var
-    | MK_LPAREN expression MK_RPAREN
-    | function_call
+    NUM_INT {$$ = tINT;}
+    | NUM_FLOAT {$$ = tFLOAT;}
+    | STRING {$$ = tCHAR;}
+    | var {$$ = $1;}
+    | MK_LPAREN expression MK_RPAREN {$$ = $2;}
+    | function_call {$$ = tTEMP;}
     ;
 
 var :
-    ID
-    | array
-    | struct_ref
+    ID {$$ = search_id(global, $1)-> return_type;}
+    /*TODO:Make array and struct types work*/
+    | array {$$ = tTEMP;}
+    | struct_ref {$$ = tTEMP;}
     ;
 
 array: ID reference_bracket_chain

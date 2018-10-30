@@ -16,6 +16,7 @@ typedef struct node* ptr;
 #define tFLOATARR "FLOATARR"
 #define tCHAR "CHAR"
 #define tERROR "ERROR"
+#define tTEMP "TEMPTYPE"
 
 typedef struct scope {
     ptr* symtab;
