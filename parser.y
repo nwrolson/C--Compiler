@@ -29,6 +29,7 @@ struct const_type{
     char* ID_list;
     char* type;
     int num_args;
+    int arr_dim;
 }
 
 %token <s> ID
@@ -79,6 +80,8 @@ struct const_type{
 
 /*Use num_args to get number of arguments in function declaration and call*/
 %type<num_args> parameter_list parameter_tail expression_list expression_tail
+
+%type<arr_dim> bracket_chain parameter_bracket_chain
 
 /*Use s to get operators*/
 %type<s> comp_op add_op mul_op
@@ -156,7 +159,14 @@ parameter : type ID parameter_bracket_chain
 
 parameter_bracket_chain : 
     MK_LB MK_RB bracket_chain
-    | bracket_chain
+        {
+            if($3<1){
+                $$ = -1;
+            } else {
+                $$ = 1 + $3;
+            }
+        }
+    | bracket_chain {$$ = $1;}
     ;
 
 block : 
@@ -182,6 +192,7 @@ block :
         {
             ptr p = insert_id(global, $2);
             strcpy(p-> return_type, $1);
+            p-> arr_dim = $3;
         }
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
@@ -202,8 +213,16 @@ block :
     ;
 
 bracket_chain : 
-    MK_LB NUM_INT MK_RB bracket_chain
-    | %empty
+    MK_LB expression MK_RB bracket_chain
+        {
+            if(strcmp($2, "INT")!=0){
+                printf("Array subscript is not an integer\n");
+                $$=-1;
+            } else {
+                $$ = 1 + $4;
+            }
+        }
+    | %empty {$$ = 0;}
     ;
 
 
