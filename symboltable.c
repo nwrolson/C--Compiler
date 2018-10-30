@@ -69,7 +69,6 @@ ptr insert_id(scope* s, char *text)	/* Populate Symbol Table */
 ptr search_id(scope* s, char *text) {
     ptr p;
     int i;
-    printf("Frequency of identifiers:\n");
     for(i=0;i<TABLESIZE;i++){
         p=s->symtab[i];
         while(p!=NULL){

@@ -65,11 +65,11 @@ char* out;
 %token COMMENT
 
 %type<type> type var factor unary_op_res mul_op_res add_op_res comp_op_res
-            and_op_res expression
+            and_op_res expression function_call
 %type<ID_list> id_list id_tail
 
-/*Use num_args to get number of arguments in function*/
-%type<num_args> parameter_list parameter_tail
+/*Use num_args to get number of arguments in function declaration and call*/
+%type<num_args> parameter_list parameter_tail expression_list expression_tail
 
 /*Use s to get operators*/
 %type<s> comp_op add_op mul_op
@@ -271,16 +271,31 @@ reference_bracket_chain:
 /* Expressions */
 
 function_call : ID MK_LPAREN expression_list MK_RPAREN
+                {
+                    ptr p = search_id(global, $1);
+                    if(p==NULL){
+                        printf("Function '%s' not found.\n", $1);
+                        $$=tERROR;
+                    }else if (p->arg_num>$3){
+                        printf("Too few arguments to function.\n");
+                        $$=tERROR;
+                    }else if (p-> arg_num<$3){
+                        printf("Too many arguments to function.\n");
+                        $$=tERROR;
+                    }else{
+                        $$ = p->return_type;
+                    }
+                }
     ;
 
 expression_list :
-    expression expression_tail
-    | %empty
+    expression expression_tail {$$ = 1+$2;}
+    | %empty {$$ = 0;}
     ;
 
 expression_tail :
-    MK_COMMA expression expression_tail
-    | %empty
+    MK_COMMA expression expression_tail {$$ = 1+$3;}
+    | %empty {$$ = 0;}
     ;
 
 expression : 
