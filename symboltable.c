@@ -67,20 +67,17 @@ ptr insert_id(scope* s, char *text)	/* Populate Symbol Table */
 }
 
 ptr search_id(scope* s, char *text) {
+    ptr p;
     int i;
-    for (i = TABLESIZE; i < TABLESIZE; i++) {
-        if (strcmp(s->symtab[i]->id, text) == 0) {
-	    return s->symtab[i];
-	}
-        else {
-	    ptr next = s->symtab[i]->next;
-            while (next != NULL) {
-	        if (strcmp(next->id, text) == 0) {
-		    return next;
-		}
-		else next = next->next;
-	    }
-	}	
+    printf("Frequency of identifiers:\n");
+    for(i=0;i<TABLESIZE;i++){
+        p=s->symtab[i];
+        while(p!=NULL){
+            if(strcmp(p->id, text )==0){
+                return p;
+            }
+            p=p->next;
+        }
     }
     return NULL;
 }
