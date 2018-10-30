@@ -98,11 +98,25 @@ global_decl	:
 
 function_decl	:
     /*TODO:Add return type checking*/
-    type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block MK_RBRACE
+    type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block RETURN MK_SEMICOLON MK_RBRACE
         {
-            ptr p = insert_id(global, $2);
-            strcpy(p->return_type, $1);
-            p->arg_num = $4;
+            if(strcmp($1, "VOID")!=0){
+                printf("Incompatible return type\n");
+            } else {
+                ptr p = insert_id(global, $2);
+                strcpy(p->return_type, $1);
+                p->arg_num = $4;
+            }
+        }
+    |type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block RETURN expression MK_SEMICOLON MK_RBRACE
+        {
+            if(strcmp($1, $9)!=0){
+                printf("Incompatible return type\n");
+            } else {
+                ptr p = insert_id(global, $2);
+                strcpy(p->return_type, $1);
+                p->arg_num = $4;
+            }
         }
     | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
         {
@@ -189,16 +203,13 @@ id_list : ID bracket_chain id_tail
        // strcpy($$, $1);
         out = malloc(strlen($1)+1);
         strcpy(out, $1);
-        printf("Out: %s\n", out);
         $$=out;
-	    printf("id_head: %s\n", $$);
     }
     ;
 
 id_tail :
     MK_COMMA ID bracket_chain id_tail
     {
-        printf("id: %s\n", $2);
         strcat($$, ",");
         strcat($$, $2);
     }   
@@ -243,8 +254,8 @@ statement :
     expression_statement
     | assignment_statement
     | control_statement
-    | RETURN MK_SEMICOLON
-    | RETURN expression MK_SEMICOLON
+/*    | RETURN MK_SEMICOLON
+    | RETURN expression MK_SEMICOLON */
     ;
 
 expression_statement: expression MK_SEMICOLON
@@ -485,7 +496,6 @@ char *argv[];
   {
      	yyin = fopen(argv[1],"r");
         global = init_scope();
-        insert_id(global, "Test");
      	yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
         print_symtab(global);

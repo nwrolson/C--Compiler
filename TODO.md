@@ -8,6 +8,7 @@ Additional error message:
 
 
 "ID (name) undeclared."
+
 In Progress:
 -typedef declarations need to work, and typedef id checking needs to be impleme
 nted.
@@ -18,6 +19,7 @@ nted.
 Additional error message: 
 
 "ID (name) redeclared."
+
 Not started
 
 ---
@@ -30,10 +32,12 @@ Additional error message:
 
 
 "too few arguments to function (name)".
+
  Complete
 
 
 "too many arguments to function (name).
+
  Complete
 
 
@@ -43,7 +47,8 @@ Additional error message:
 
 
 "Incompatible return type." 
-Not started
+
+Complete
 
 ---
 
@@ -55,6 +60,7 @@ Additional error message:
 
 
 "Incompatible array dimensions."
+
 Not started 
 
 
@@ -64,6 +70,7 @@ Additional error message:
 
 
 "Array subscript is not an integer"
+
 Not started
 
 ### 3.c An array name cannot be passed to a scalar formal parameter, and a scalar cannot be passed to an array formal parameter. 
@@ -73,9 +80,11 @@ Additional error message:
 
 "Array (name) passed to scalar parameter (name)."
  or 
+
 Not started
 
 "Scalar (name) passed to array parameter (name)."
+
 Not started
 
 ---
@@ -88,16 +97,20 @@ In addition to the selection operators ".", C-- also allows structure to be assi
 Additional error message: 
 
 " Structure has no member named (name) " 
+
 Not started
 
 ### 4.b A field name in a structure cannot be declared more than once. 
 Additional error message: 
 
 " Duplicate member (name) " 
+
 Not started
 
 ### 4.c Type checking for structures and unions: 
+
 Not started
+
 The following example illustrates some valid and invalid structure type references in C--
 
 struct complex1 { 
@@ -151,6 +164,8 @@ In ANSI C, name equivalence is used instead of structure equivalence.
 
 
 ### 4.d Structures may not contain instances of themselves. 
+
+not started
 
 For example: 
 
