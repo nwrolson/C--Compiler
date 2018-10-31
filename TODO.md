@@ -10,8 +10,10 @@ Additional error message:
 "ID (name) undeclared."
 
 In Progress:
+
 -typedef declarations need to work, and typedef id checking needs to be impleme
 nted.
+
 -scopes
 
 ### 1.b A name (a variable, a function or a type) cannot be declared more than once in the same scope (global or local). 
@@ -20,7 +22,9 @@ Additional error message:
 
 "ID (name) redeclared."
 
-Not started
+In Progress:
+-Variable and function redeclarations will produce error
+-Need to finish struct
 
 ---
 
@@ -61,7 +65,7 @@ Additional error message:
 
 "Incompatible array dimensions."
 
-Not started 
+Complete
 
 
 ### 3.b There is no need to check for array bounds. However, the array index expression must be integer. 
@@ -71,7 +75,7 @@ Additional error message:
 
 "Array subscript is not an integer"
 
-Not started
+Complete
 
 ### 3.c An array name cannot be passed to a scalar formal parameter, and a scalar cannot be passed to an array formal parameter. 
 
@@ -81,11 +85,11 @@ Additional error message:
 "Array (name) passed to scalar parameter (name)."
  or 
 
-Not started
+Complete
 
 "Scalar (name) passed to array parameter (name)."
 
-Not started
+Complete
 
 ---
 
