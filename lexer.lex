@@ -55,7 +55,7 @@ error    .
 
 {ws}            ;   /* do nothing with whitespace */
 {comment}	;
-{kwInt}         {
+{kwInt}         {   
                     yylval.type = tINT;
                     return INT;
                 }
@@ -152,4 +152,3 @@ error    .
 {error}         return ERROR;
 
 %%
-

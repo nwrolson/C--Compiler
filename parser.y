@@ -30,6 +30,7 @@ struct const_type{
     char* type;
     int num_args;
     int arr_dim;
+    ptr var;
 }
 
 %token <s> ID
@@ -74,14 +75,16 @@ struct const_type{
 
 %token COMMENT
 
-%type<type> type var factor unary_op_res mul_op_res add_op_res comp_op_res
+%type<type> type factor unary_op_res mul_op_res add_op_res comp_op_res
             and_op_res expression function_call
+%type<var> var  struct_ref
+
 %type<ID_list> id_list id_tail
 
 /*Use num_args to get number of arguments in function declaration and call*/
 %type<num_args> parameter_list parameter_tail expression_list expression_tail
 
-%type<arr_dim> bracket_chain parameter_bracket_chain
+%type<arr_dim> bracket_chain parameter_bracket_chain reference_bracket_chain
 
 /*Use s to get operators*/
 %type<s> comp_op add_op mul_op
@@ -115,9 +118,18 @@ function_decl	:
             if(strcmp($1, "VOID")!=0){
                 printf("Incompatible return type\n");
             } else {
-                ptr p = insert_id(global, $2);
-                strcpy(p->return_type, $1);
-                p->arg_num = $4;
+                ptr p = search_id(global, $2);
+                if(p == NULL){
+                    p = insert_id(global, $2);
+                    strcpy(p->return_type, $1);
+                    p->arg_num = $4;
+                    p->fun_body = 1;
+                }else if (p->fun_body!=1){
+                    strcpy(p->return_type, $1);
+                    p-> fun_body = 1;
+                }else {
+                    printf("ID '%s' redeclared\n");
+                }
             }
         }
     |type ID MK_LPAREN parameter_list MK_RPAREN MK_LBRACE block RETURN expression MK_SEMICOLON MK_RBRACE
@@ -125,16 +137,31 @@ function_decl	:
             if(strcmp($1, $9)!=0){
                 printf("Incompatible return type\n");
             } else {
-                ptr p = insert_id(global, $2);
-                strcpy(p->return_type, $1);
-                p->arg_num = $4;
+                ptr p = search_id(global, $2);
+                if(p == NULL){
+                    p = insert_id(global, $2);
+                    strcpy(p->return_type, $1);
+                    p->arg_num = $4;
+                    p->fun_body = 1;
+                }else if (p->fun_body!=1){
+                    strcpy(p->return_type, $1);
+                    p-> fun_body = 1;
+                }else {
+                    printf("ID '%s' redeclared\n");
+                }
             }
+
         }
     | type ID MK_LPAREN parameter_list MK_RPAREN MK_SEMICOLON
         {
-            ptr p = insert_id(global, $2);
-            strcpy(p->return_type, $1);
-            p->arg_num = $4;
+            ptr p = search_id(global, $2);
+            if(p==NULL){
+                p = insert_id(global, $2);
+                strcpy(p->return_type, $1);
+                p->arg_num = $4;
+            }else {
+                printf("ID '%s' redeclared\n");
+            }
         }
 		;
 
@@ -155,6 +182,7 @@ parameter : type ID parameter_bracket_chain
             {
                 ptr p = insert_id(global, $2);
                 strcpy(p->return_type, $1);
+                p -> arr_dim = $3;
             }
 
 parameter_bracket_chain : 
@@ -190,20 +218,33 @@ block :
     }*/
     type ID bracket_chain MK_SEMICOLON
         {
-            ptr p = insert_id(global, $2);
-            strcpy(p-> return_type, $1);
-            p-> arr_dim = $3;
+            ptr p = search_id(global, $2);
+            if(p == NULL){
+                p = insert_id(global, $2);
+                strcpy(p-> return_type, $1);
+                p-> arr_dim = $3;
+            } else {
+                printf("ID '%s' redeclared\n", $2);
+            }
         }
     | type ID OP_ASSIGN expression MK_SEMICOLON
         {
-           // printf("Id to be inserted: %s\n", $2 );
-            if(strcmp($1, $3)!=0
-                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
-                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
-                printf("Incompatible type\n");
-            } else {
-                ptr p = insert_id(global, $2);
-                strcpy(p-> return_type, $1);
+ 
+            if(strcmp($1, $4)!=0
+               &&((strcmp($1, "INT")!=0
+                   &&strcmp($1, "FLOAT")!=0))
+               ||(strcmp($4, "INT")!=0&&strcmp($4, "FLOAT")!=0)){
+                printf("Incompatible types %s and %s\n", $1, $4);
+            }else if (strcmp($3, "ARRAY")==0){
+                printf("Array passed to scalar parameter '%s'\n", $1);
+            }else {
+                ptr p = search_id(global, $2);
+                if(p == NULL){
+                    p = insert_id(global, $2);
+                    strcpy(p-> return_type, $1);
+                } else {
+                    printf("ID '%s' redeclared\n", $2);
+                }
 	            //printf("declaration!\n");
             }
         }
@@ -293,18 +334,41 @@ assignment_statement: assignment MK_SEMICOLON
     ;
 
 assignment: var OP_ASSIGN expression
-         {
-             if(strcmp($1, $3)!=0
-                &&((strcmp($1, "INT")!=0&&strcmp($1, "FLOAT")!=0))
-                   ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
-                 printf("Incompatible types %s and %s\n", $1, $3);
-             } 
-         }
+        {
+            if($1==NULL){
+               printf("Incompatible types %s and %s\n", tERROR, $3);
+            }else if(strcmp($1->return_type, $3)!=0
+               &&((strcmp($1->return_type, "INT")!=0
+                   &&strcmp($1->return_type, "FLOAT")!=0))
+               ||(strcmp($3, "INT")!=0&&strcmp($3, "FLOAT")!=0)){
+                printf("Incompatible types %s and %s\n", $1->return_type, $3);
+            }else if (($1->arr_dim != $1->arg_num)&&(strcmp($3, "ARRAY")!=0)){
+                printf("Scalar passed to array parameter '%s'\n", $1->id);
+            }else if (($1->arr_dim == $1->arg_num)&&(strcmp($3, "ARRAY")==0)){
+                printf("Array passed to scalar parameter '%s'\n", $1->id);
+            }
+        }
     ;
 
 reference_bracket_chain:
     MK_LB expression MK_RB reference_bracket_chain
+         {
+            if(strcmp($2, "INT")!=0){
+                printf("Array subscript is not an integer\n");
+                $$=-1;
+            } else {
+                $$ = 1 + $4;
+            }
+        }
     | MK_LB expression MK_RB
+        {
+            if(strcmp($2, "INT")!=0){
+                printf("Array subscript is not an integer\n");
+                $$=-1;
+            } else {
+                $$ = 1;
+            }
+        }
     ;
 
 /* Expressions */
@@ -429,34 +493,48 @@ factor :
     NUM_INT {$$ = tINT;}
     | NUM_FLOAT {$$ = tFLOAT;}
     | STRING {$$ = tCHAR;}
-    | var {$$ = $1;}
+    | var 
+        {
+            if($1==NULL){
+                $$ = tERROR;
+            } else if ($1->arg_num == $1-> arr_dim) {
+                $$ = $1->return_type;
+            } else {
+                printf("Incompatible array dimensions\n");
+                $$ = tARR;
+            }
+        }
     | MK_LPAREN expression MK_RPAREN {$$ = $2;}
-    | function_call {$$ = tTEMP;}
+    | function_call {$$ = $1;}
     ;
 
 var :
     ID  {
             ptr p = search_id(global, $1);
-            if (p == NULL){
-                $$ = tERROR;
-                printf("Variable '%s' not found.\n", $1);
-            } else {
-                $$ = p-> return_type;
+            if(p==NULL){
+                printf("ID %s not declared", $1);
             }
+            $$ = p;
         }
     /*TODO:Make array and struct types work*/
-    | array {$$ = tTEMP;}
-    | struct_ref {$$ = tTEMP;}
-    ;
-
-array: ID reference_bracket_chain
+    | ID reference_bracket_chain
+        {
+            ptr p = search_id(global, $1);
+            if(p==NULL){
+                printf("ID %s not declared", $1);
+            } else {
+                p -> arg_num = $2;
+            }
+            $$ = p;
+        }
+    | struct_ref {$$ = NULL;}
     ;
 
 struct_ref :
-    ID MK_DOT ID
-    | ID MK_DOT array
-    | array MK_DOT ID
-    | array MK_DOT array
+    ID MK_DOT ID {$$=NULL;}
+    | ID MK_DOT ID reference_bracket_chain {$$=NULL;}
+    | ID reference_bracket_chain MK_DOT ID {$$=NULL;}
+    | ID reference_bracket_chain MK_DOT ID reference_bracket_chain {$$=NULL;}
 
 add_op :
     OP_PLUS
@@ -509,7 +587,7 @@ char *argv[];
   {
      	yyin = fopen(argv[1],"r");
         global = init_scope();
-     	yyparse();
+        yyparse();
      	printf("%s\n", "Parsing completed. No errors found.");
         print_symtab(global);
         cleanup_symtab(global);
