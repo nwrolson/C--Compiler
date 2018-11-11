@@ -57,7 +57,6 @@ int get_reg() {
     }
     return reg_number;
 }
-int convert_reg(int reg) {return reg-8;}
 
 int get_offset(char *name){
     ptr p = search_id(name);
@@ -334,9 +333,7 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 expr		: expr add_op term{
                 /*TODO: Add subtraction*/
                 int reg = get_reg();
-                printf("add $t%d, $t%d, $t%d",
-                    convert_reg(reg),
-                    convert_reg($1->place), convert_reg($3->place));
+                printf("add $%d, $%d, $%d", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
             }
@@ -350,9 +347,7 @@ add_op		: OP_PLUS
 term		: term mul_op factor{
                 /*TODO: Add divison*/
                 int reg = get_reg();
-                printf("mul $t%d, $t%d, $t%d",
-                    convert_reg(reg),
-                    convert_reg($1->place), convert_reg($3->place));
+                printf("mul $%d, $%d, $%d", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
             }
