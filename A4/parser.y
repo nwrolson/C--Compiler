@@ -10,7 +10,33 @@ int ARoffset = 0;
 int reg_number = 8;
 int exit_number = 0;
 int else_number = 0;
-int label_hold = 0;
+
+int exit_stack[10];
+int iexit = -1;
+int else_stack[10];
+int ielse = -1;
+
+void push(char *stack, int label){
+    if(strcmp(stack, "exit")){
+        iexit++;
+        exit_stack[iexit] = label;
+    } else {
+        ielse++;
+        else_stack[ielse] = label;
+    }
+}
+
+int pop(char *stack){
+    int out;
+    if(strcmp(stack, "exit")){
+        out = exit_stack[iexit];
+        iexit--;
+    } else {
+        out = else_stack[ielse];
+        ielse--;
+    }
+    return out;
+}
 
 void insert(char *name){
     insert_id(name);
@@ -296,7 +322,7 @@ stmt		: MK_LBRACE block MK_RBRACE
             int reg, elsel;
             reg = get_reg();
             elsel = get_else();
-            label_hold = elsel;
+            push("else", elsel);
             if($3->scope!=NULL){
                 printf("lw $%d, _%s\n", reg, $3->id);
                 printf("beqz $%d, Lelse%d\n", reg, elsel);
@@ -307,15 +333,16 @@ stmt		: MK_LBRACE block MK_RBRACE
         }
         stmt ELSE
         {
-            int exitl;
+            int exitl, elsel;
             exitl = get_exit();
+            push("exit", exitl);
+            elsel = pop("else");
             printf("j Lexit%d\n", exitl);
-            printf("Lelse%d:\n", label_hold);
-            label_hold = exitl;
+            printf("Lelse%d:\n", elsel);
         }
         stmt
         {
-            printf("Lexit%d:\n", label_hold);
+            printf("Lexit%d:\n", pop("exit"));
         }
 		/* | If statement here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN
@@ -329,11 +356,11 @@ stmt		: MK_LBRACE block MK_RBRACE
             } else {
                 printf("beqz $%d, Lexit%d\n", $3->place, exitl);
             }
-            label_hold = exitl;
+            push("exit", exitl);
         }
         stmt
         {
-            printf("Lexit%d:\n", label_hold);
+            printf("Lexit%d:\n", pop("exit"));
         }
 		/* | read and write library calls -- note that read/write are not keywords */ 
 		| ID MK_LPAREN relop_expr_list MK_RPAREN
