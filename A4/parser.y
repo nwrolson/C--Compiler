@@ -8,6 +8,8 @@
 static int linenumber = 1;
 int ARoffset = 0;
 int reg_number = 8;
+int exit_number = 0;
+int else_number = 0;
 
 void insert(char *name){
     insert_id(name);
@@ -32,11 +34,11 @@ void gen_prologue(char *name){
     printf("add $sp, $sp, -8\n"); //Only for int
     printf("lw $2, _framesize_%s\n", name);
     printf("sub $sp, $sp, $2\n");
-    printf("_begin_%s\n", name);
+    printf("_begin_%s:\n", name);
 }
 
 void gen_epilogue(char *name){
-    printf("_end_%s\n", name);
+    printf("_end_%s:\n", name);
     printf("lw $ra, 4($fp)\n"); //Only for int
     printf("add $sp, $fp, 4\n"); //Only for int
     printf("lw $fp, 0($fp)\n");
@@ -54,6 +56,10 @@ int get_reg() {
     }
     return reg_number;
 }
+
+int get_exit() {return (exit_number++);}
+
+int get_else() {return (else_number++);}
 
 int get_offset(char *name){
     ptr p = search_id(name);
@@ -140,11 +146,9 @@ function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE block MK_RBRACE
             printf(".text\n");
             printf("%s:\n", $2->id);
             gen_prologue($2->id);
-            printf("_begin_%s:\n", $2->id);
         }
         MK_LBRACE block MK_RBRACE
         {
-            printf("_end_%s:\n", $2->id);
             gen_epilogue($2->id);
         }
 
@@ -286,7 +290,20 @@ stmt		: MK_LBRACE block MK_RBRACE
 		| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
 	        | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
 		/* | If then else here */ 
-		| IF MK_LPAREN relop_expr MK_RPAREN stmt ELSE stmt
+		| IF MK_LPAREN relop_expr MK_RPAREN
+        {
+            int reg, exitl;
+            reg = get_reg();
+            exitl = get_exit();
+            if(strcmp($3->scope, "")!=0){
+                printf("lw $%d, _%s\n", reg, $3->id);
+                printf("beqz $%d, Lexit%d\n", reg, exitl);
+            } else {
+                printf("beqz $%d, Lexit%d\n", $3->place, exitl);
+            }
+            
+        }
+        stmt ELSE stmt
 		/* | If statement here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN stmt 
 		/* | read and write library calls -- note that read/write are not keywords */ 
