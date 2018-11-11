@@ -10,6 +10,7 @@ int ARoffset = 0;
 int reg_number = 8;
 int exit_number = 0;
 int else_number = 0;
+int label_hold = 0;
 
 void insert(char *name){
     insert_id(name);
@@ -292,20 +293,48 @@ stmt		: MK_LBRACE block MK_RBRACE
 		/* | If then else here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN
         {
+            int reg, elsel;
+            reg = get_reg();
+            elsel = get_else();
+            label_hold = elsel;
+            if($3->scope!=NULL){
+                printf("lw $%d, _%s\n", reg, $3->id);
+                printf("beqz $%d, Lelse%d\n", reg, elsel);
+            } else {
+                printf("beqz $%d, Lelse%d\n", $3->place, elsel);
+            }
+            
+        }
+        stmt ELSE
+        {
+            int exitl;
+            exitl = get_exit();
+            printf("j Lexit%d\n", exitl);
+            printf("Lelse%d:\n", label_hold);
+            label_hold = exitl;
+        }
+        stmt
+        {
+            printf("Lexit%d:\n", label_hold);
+        }
+		/* | If statement here */ 
+		| IF MK_LPAREN relop_expr MK_RPAREN
+        {
             int reg, exitl;
             reg = get_reg();
             exitl = get_exit();
-            if(strcmp($3->scope, "")!=0){
+            if($3->scope!=NULL){
                 printf("lw $%d, _%s\n", reg, $3->id);
                 printf("beqz $%d, Lexit%d\n", reg, exitl);
             } else {
                 printf("beqz $%d, Lexit%d\n", $3->place, exitl);
             }
-            
+            label_hold = exitl;
         }
-        stmt ELSE stmt
-		/* | If statement here */ 
-		| IF MK_LPAREN relop_expr MK_RPAREN stmt 
+        stmt
+        {
+            printf("Lexit%d:\n", label_hold);
+        }
 		/* | read and write library calls -- note that read/write are not keywords */ 
 		| ID MK_LPAREN relop_expr_list MK_RPAREN
 		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
