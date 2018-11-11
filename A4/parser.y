@@ -44,10 +44,7 @@ void gen_epilogue(char *name){
         printf("li $v0, 10\nsyscall\n");
     } else {
         printf("jr $ra\n");
-    }
-    printf(".data\n");
-    printf("_framesize_%s: .word 4\n", name); //Only for int
-    
+    }    
 }
 
 int get_reg() {
@@ -112,7 +109,8 @@ int get_offset(char *name){
 %token RETURN
 
 %type<n> id_list var_decl var_ref init_id_list init_id relop_expr
-         relop_term relop_factor expr add_op mul_op term factor
+         relop_term relop_factor expr add_op mul_op term factor decl decl_list
+         block
 
 %start program
 
@@ -135,7 +133,21 @@ global_decl	: decl_list function_decl
 function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE block MK_RBRACE
 		/* | Other function_decl productions */
                 /*Empty parameter list.*/
-		| type ID MK_LPAREN MK_RPAREN MK_LBRACE block MK_RBRACE
+		| type ID MK_LPAREN MK_RPAREN
+        {
+            printf(".data\n");
+            printf("_framesize_%s: .word 0\n", $2->id); //TODO: Only for INT
+            printf(".text\n");
+            printf("%s:\n", $2->id);
+            gen_prologue($2->id);
+            printf("_begin_%s:\n", $2->id);
+        }
+        MK_LBRACE block MK_RBRACE
+        {
+            printf("_end_%s:\n", $2->id);
+            gen_epilogue($2->id);
+        }
+
                 /*Function declarations. The above ones are function definitions*/
 		| type ID MK_LPAREN param_list MK_RPAREN MK_SEMICOLON 
 		| type ID MK_LPAREN MK_RPAREN MK_SEMICOLON
@@ -163,16 +175,20 @@ expr_null	:expr
 		;
 
 block           : decl_list stmt_list 
-                | stmt_list
+                | stmt_list {$$=NULL;}
                 | decl_list
                 |
                 ;
  
 decl_list	: decl_list decl
+            {
+                $$ = $2;
+                $$->next = $1;
+            }
 		| decl
 		;
 
-decl		: type_decl
+decl		: type_decl {$$=NULL;}
 		| var_decl
 		;
 
@@ -188,8 +204,8 @@ var_decl	: type init_id_list MK_SEMICOLON{
                     insert(p->id);
                     p = p->next;
                 }
+                $$ = $2;
             }
-        /*: type init_id_list MK_SEMICOLON*/
 		| struct_type id_list MK_SEMICOLON{
             $$=NULL;
         }
@@ -199,6 +215,7 @@ var_decl	: type init_id_list MK_SEMICOLON{
                 insert(p->id);
                 p = p->next;
             }
+            $$ = $2;
         }
 		;
 
@@ -222,7 +239,6 @@ tag		: ID MK_LBRACE decl_list MK_RBRACE
 
 
 id_list		: ID {
-                printf("At id_list\n");
                 $$ = $1;
             } 
 		| id_list MK_COMMA ID {
@@ -278,8 +294,12 @@ stmt		: MK_LBRACE block MK_RBRACE
 		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
             int offset, reg;
             reg = $3->place;
-            offset = get_offset($1->id);
-            printf("sw $%d, %d($fp)\n", reg, offset);
+            if($1->scope == NULL){
+                offset = get_offset($1->id);
+                printf("sw $%d, %d($fp)\n", reg, offset);
+            } else {
+                printf("sw $%d, _%s", reg, $1->id);
+            }
         }
 		| relop_expr_list MK_SEMICOLON
 		| MK_SEMICOLON
@@ -333,7 +353,7 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 expr		: expr add_op term{
                 /*TODO: Add subtraction*/
                 int reg = get_reg();
-                printf("add $%d, $%d, $%d", reg, $1->place, $3->place);
+                printf("add $%d, $%d, $%d\n", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
             }
@@ -347,9 +367,10 @@ add_op		: OP_PLUS
 term		: term mul_op factor{
                 /*TODO: Add divison*/
                 int reg = get_reg();
-                printf("mul $%d, $%d, $%d", reg, $1->place, $3->place);
+                printf("mul $%d, $%d, $%d\n", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
+                
             }
 		| factor
 		;
@@ -366,7 +387,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$=NULL;}
 		| CONST{
                 int reg;
                 reg = get_reg();
-                printf("“li $%d, %d\n", reg, $1->value);
+                printf("li $%d, %d\n", reg, $1->value);
                 $$->place = reg;
             }	
 		/* | - constant, here - is an Unary operator */ 
@@ -376,7 +397,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$=NULL;}
         {
             int reg;
             reg = get_reg();
-            printf("“li $%d, %d\n", reg, 0-$2->value);
+            printf("li $%d, %d\n", reg, 0-$2->value);
             $$->place = reg;
         }
 		| ID MK_LPAREN relop_expr_list MK_RPAREN {$$=NULL;}
@@ -396,7 +417,7 @@ var_ref		: ID {
                 reg = get_reg();
                 $$->place = reg;
                 offset = get_offset($1->id);
-                printf("\tlw $%d, %d($fp)\n", reg, offset);
+                printf("lw $%d, %d($fp)\n", reg, offset);
             } 
 		| var_ref dim
 		| var_ref struct_tail

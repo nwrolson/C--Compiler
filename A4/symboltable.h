@@ -1,5 +1,6 @@
 struct node{	/* Structure for Identifiers */
     char id[257];
+    char *scope;
     int freq;
     int arg_num;	/*# of Arguments in the function*/
     int return_type;	/*Return type of the function*/
