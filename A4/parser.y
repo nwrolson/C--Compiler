@@ -10,30 +10,39 @@ int ARoffset = 0;
 int reg_number = 8;
 int exit_number = 0;
 int else_number = 0;
+int while_number = 0;
 
 int exit_stack[10];
 int iexit = -1;
 int else_stack[10];
 int ielse = -1;
+int while_stack[10];
+int iwhile;
 
 void push(char *stack, int label){
-    if(strcmp(stack, "exit")){
+    if(strcmp(stack, "exit")==0){
         iexit++;
         exit_stack[iexit] = label;
-    } else {
+    } else if (strcmp(stack, "else")==0) {
         ielse++;
         else_stack[ielse] = label;
+    } else {
+        iwhile++;
+        while_stack[iwhile] = label;
     }
 }
 
 int pop(char *stack){
     int out;
-    if(strcmp(stack, "exit")){
+    if(strcmp(stack, "exit")==0){
         out = exit_stack[iexit];
         iexit--;
-    } else {
+    } else if(strcmp(stack, "else")==0){
         out = else_stack[ielse];
         ielse--;
+    } else {
+        out = while_stack[iwhile];
+        iwhile--;
     }
     return out;
 }
@@ -87,6 +96,8 @@ int get_reg() {
 int get_exit() {return (exit_number++);}
 
 int get_else() {return (else_number++);}
+
+int get_while() {return (while_number++);}
 
 int get_offset(char *name){
     ptr p = search_id(name);
@@ -314,8 +325,29 @@ stmt_list	: stmt_list stmt
 
 stmt		: MK_LBRACE block MK_RBRACE
 		/* | While Statement here */
-		| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
-	        | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
+		/*| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt*/
+        /*TODO: expand for the case of while(a, b, c,...){}*/
+        | WHILE MK_LPAREN relop_expr MK_RPAREN
+        {
+            int reg, whilel;
+            whilel= get_while();
+            reg = get_reg();
+            push("while", whilel);
+            printf("_Test%d:\n", whilel);
+            if($3->scope!=NULL){
+                printf("lw $%d, _%s\n", reg, $3->id);
+                printf("beqz $%d, _Lexit%d\n", reg, whilel);
+            } else {
+                printf("beqz $%d, _Lexit%d\n", $3->place, whilel);
+            }
+        }
+        stmt
+        {
+            int whilel = pop("while");
+            printf("j _Test%d\n", whilel);
+            printf("_Lexit%d:\n", whilel);
+        }
+	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
 		/* | If then else here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN
         {
