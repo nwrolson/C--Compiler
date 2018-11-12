@@ -155,7 +155,7 @@ int get_offset(char *name){
 %token RETURN
 
 %type<n> id_list var_decl var_ref init_id_list init_id relop_expr
-         relop_term relop_factor expr add_op mul_op term factor decl decl_list
+         relop_term relop_factor expr term factor decl decl_list
          block relop_expr_list nonempty_relop_expr_list
 
 %start program
@@ -464,34 +464,44 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 		| relop_expr
 		;
 
-expr		: expr add_op term{
-                /*TODO: Add subtraction*/
+expr		: expr OP_PLUS term{
                 int reg = get_reg();
                 printf("add $%d, $%d, $%d\n", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
             }
+        | expr OP_MINUS term{
+            int reg = get_reg();
+            printf("sub $%d, $%d, $%d\n", reg, $1->place, $3->place);
+            $$=$1;
+            $$->place = reg;
+        }
 		| term
 		;
 
-add_op		: OP_PLUS
-		| OP_MINUS
-		;
+add_op      : OP_PLUS
+        |OP_MINUS
+        ;
 
-term		: term mul_op factor{
-                /*TODO: Add divison*/
+term		: term OP_TIMES factor{
                 int reg = get_reg();
                 printf("mul $%d, $%d, $%d\n", reg, $1->place, $3->place);
                 $$=$1;
                 $$->place = reg;
                 
             }
+        | term OP_DIVIDE factor{
+            int reg = get_reg();
+            printf("div $%d, $%d, $%d\n", reg, $1->place, $3->place);
+            $$=$1;
+            $$->place = reg;
+        }
 		| factor
 		;
 
-mul_op		: OP_TIMES
-		| OP_DIVIDE
-		;
+mul_op      : OP_TIMES
+        | OP_DIVIDE
+        ;
 
 factor		: MK_LPAREN relop_expr MK_RPAREN {$$=NULL;}
 		/* | -(<relop_expr>) */ 
