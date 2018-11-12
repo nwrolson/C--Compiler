@@ -403,6 +403,13 @@ stmt		: MK_LBRACE block MK_RBRACE
                 printf("li $v0 4\n");
                 printf("la $a0 m%d\n", label);
                 printf("syscall\n");
+            } else if (strcmp($1->id, "read")==0){
+                int reg = get_reg()
+                printf("li $v0 5\n");
+                printf("syscall\n");
+                printf("move $%d, $v0\n", reg);
+                $$->place=reg;
+                
             }
         }
 		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
