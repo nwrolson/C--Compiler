@@ -84,7 +84,7 @@ void gen_epilogue(char *name){
         printf("jr $ra\n");
     }
     printf(".data\n");
-    printf("_framesize_%s:\t.word 36\n", name); //TODO use actual number
+    printf("_framesize_%s:\t.word %d\n", name, (reg_number-8)*4);
 }
 
 int get_reg() {
