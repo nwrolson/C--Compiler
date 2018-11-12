@@ -59,7 +59,7 @@ void insert(char *name){
 }
 
 void gen_head(char *name){
-    printf(".text");
+    printf(".text\n");
     printf("%s:\n", name);
 }
 
@@ -82,7 +82,9 @@ void gen_epilogue(char *name){
         printf("li $v0, 10\nsyscall\n");
     } else {
         printf("jr $ra\n");
-    }    
+    }
+    printf(".data\n");
+    printf("_framesize_%s:\t.word 36\n", name); //TODO use actual number
 }
 
 int get_reg() {
@@ -154,7 +156,7 @@ int get_offset(char *name){
 
 %type<n> id_list var_decl var_ref init_id_list init_id relop_expr
          relop_term relop_factor expr add_op mul_op term factor decl decl_list
-         block
+         block relop_expr_list nonempty_relop_expr_list
 
 %start program
 
@@ -179,10 +181,7 @@ function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE block MK_RBRACE
                 /*Empty parameter list.*/
 		| type ID MK_LPAREN MK_RPAREN
         {
-            printf(".data\n");
-            printf("_framesize_%s: .word 0\n", $2->id); //TODO: Only for INT
-            printf(".text\n");
-            printf("%s:\n", $2->id);
+            gen_head($2->id);
             gen_prologue($2->id);
         }
         MK_LBRACE block MK_RBRACE
@@ -395,7 +394,17 @@ stmt		: MK_LBRACE block MK_RBRACE
             printf("Lexit%d:\n", pop("exit"));
         }
 		/* | read and write library calls -- note that read/write are not keywords */ 
-		| ID MK_LPAREN relop_expr_list MK_RPAREN
+		| ID MK_LPAREN relop_expr_list MK_RPAREN{
+            if(strcmp($1->id, "write")==0){
+                int label = get_while();
+                printf(".data\n");
+                printf("m%d:\t.asciiz\t%s\n", label,$3->id);
+                printf(".text\n");
+                printf("li $v0 4\n");
+                printf("la $a0 m%d\n", label);
+                printf("syscall\n");
+            }
+        }
 		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
             int offset, reg;
             reg = $3->place;
@@ -510,20 +519,21 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$=NULL;}
 		| OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN {$$=NULL;}
                 /* OP_MINUS condition added as C could have a condition like: "if(-read(i))".	*/	
 		| OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN {$$=NULL;}
-		| var_ref
+		/*| var_ref*/
+        | ID {
+            int offset, reg;
+            reg = get_reg();
+            $$->place = reg;
+            offset = get_offset($1->id);
+            printf("lw $%d, %d($fp)\n", reg, offset);
+        }
 		/* | - var-reference */ 
 		| OP_NOT var_ref {$$=NULL;}
                 /* OP_MINUS condition added as C could have a condition like: "if(-a)".	*/	
 		| OP_MINUS var_ref {$$=NULL;}
 		;
 
-var_ref		: ID {
-                int offset, reg;
-                reg = get_reg();
-                $$->place = reg;
-                offset = get_offset($1->id);
-                printf("lw $%d, %d($fp)\n", reg, offset);
-            } 
+var_ref		: ID
 		| var_ref dim
 		| var_ref struct_tail
 		;
