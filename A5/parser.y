@@ -140,7 +140,7 @@ global_decl	: decl_list function_decl
 		| function_decl
 		;
 
-function_decl	: type ID MK_LPAREN param_list MK_RPAREN {strcpy(current_scope, $2);} MK_LBRACE block MK_RBRACE
+function_decl	: type ID MK_LPAREN param_list MK_RPAREN {strcpy(current_scope, $2);} MK_LBRACE block MK_RBRACE {strcpy(current_scope, "global");}
 		/* | Other function_decl productions */
                 /*Empty parameter list.*/
 		| type ID MK_LPAREN MK_RPAREN {strcpy(current_scope, $2);}  MK_LBRACE block MK_RBRACE
@@ -242,7 +242,7 @@ init_id		: ID {
                     if(strcmp(current_scope, "global")==0){
                         printf("\t.data\n");
                         printf("\t.align 2\n");
-                        printf("_%s:\t.space %d", current_type);
+                        printf("_%s:\t.space %d", $1, current_type);
                     }
                  }
 		| ID dim_decl {
@@ -250,7 +250,7 @@ init_id		: ID {
                         if(strcmp(current_scope, "global")==0){
                             printf("\t.data\n");
                             printf("\t.align 2\n");
-                            printf("_%s:\t.space %d", current_type*$2);
+                            printf("_%s:\t.space %d", $1, current_type*$2);
                         }
                       }
 		| ID OP_ASSIGN relop_expr
