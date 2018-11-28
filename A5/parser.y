@@ -14,7 +14,6 @@ int current_type;
 char current_scope[256] = "global";
 
 void gen_prologue(char* name){
-    printf(".text\n");
     printf("\tsw $ra, 0($sp)\n");
     printf("\tsw $fp, -4($sp)\n");
     printf("\tadd $fp, $sp, -4\n");
@@ -36,11 +35,11 @@ void gen_epilogue(char* name){
         printf("\t jr $ra\n");
     }
     printf(".data\n");
-    printf("_framesize_%s\n:\t.word\t%d", name, -ARoffset);
+    printf("_framesize_%s:\t.word\t%d\n", name, -ARoffset);
 }
 
 void gen_head(char* name){
-    printf(".text");
+    printf(".text\n");
     printf("%s:\n", name);
 }
 int get_reg(){
@@ -136,7 +135,7 @@ struct cnst_struct{
 %token ERROR
 %token RETURN
 
-%type<i> type dim_decl
+%type<i> type dim_decl dim_fn dimfn1 struct_type
 
 %type<place> relop_expr relop_term relop_factor expr term factor var_ref
 
@@ -160,10 +159,24 @@ global_decl	: decl_list function_decl
 		| function_decl
 		;
 
-function_decl	: type ID MK_LPAREN param_list MK_RPAREN {strcpy(current_scope, $2);} MK_LBRACE block MK_RBRACE {strcpy(current_scope, "global");}
-		/* | Other function_decl productions */
+function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE {
+                    ARoffset = -4;
+                    gen_head($2);
+                    gen_prologue($2);
+                    strcpy(current_scope, $2);
+                    change_scope("param", current_scope);
+                } block {
+                    gen_epilogue($2);
+                } MK_RBRACE {strcpy(current_scope, "global");}
                 /*Empty parameter list.*/
-		| type ID MK_LPAREN MK_RPAREN {strcpy(current_scope, $2);}  MK_LBRACE block MK_RBRACE
+		| type ID MK_LPAREN MK_RPAREN MK_LBRACE {
+            ARoffset = -4;
+            gen_head($2);
+            gen_prologue($2);
+            strcpy(current_scope, $2);
+        } block {
+            gen_epilogue($2);
+        } MK_RBRACE {strcpy(current_scope, "global");}
                 /*Function declarations. The above ones are function definitions*/
 		| type ID MK_LPAREN param_list MK_RPAREN MK_SEMICOLON 
 		| type ID MK_LPAREN MK_RPAREN MK_SEMICOLON
@@ -173,17 +186,27 @@ param_list	: param_list MK_COMMA  param
 		| param	
 		;
 
-param		: type ID 
+param		: type ID
+        {
+            current_type = $1;
+            strcpy(current_scope, "param");
+            insert_var($2, 1);
+        }
 		| struct_type ID
 		| type ID dim_fn
+        {
+            current_type = $1;
+            strcpy(current_scope, "param");
+            insert_var($2, $3);
+        }
 		| struct_type ID dim_fn 
 		;
 
-dim_fn		:MK_LB expr_null MK_RB dimfn1
+dim_fn		:MK_LB expr_null MK_RB dimfn1 {$$ = 1 + $4;}
 		;
 
-dimfn1		:MK_LB expr MK_RB dimfn1
-		|
+dimfn1		:MK_LB expr MK_RB dimfn1 {$$ = 1 + $4;}
+		| {$$ = 0;}
 		;
 
 expr_null	:expr
@@ -222,7 +245,7 @@ type		: INT {$$ = 4;}
         	|error {$$ = -1;}
 		;
 
-struct_type	: STRUCT tag
+struct_type	: STRUCT tag {$$ = -1;} /*UNIMPLEMENTED*/
 		;
 
 /* Struct variable body. */

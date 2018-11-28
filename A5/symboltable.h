@@ -30,6 +30,7 @@ struct com_node* getcomment(char *str);
 void init_symtab();
 void insert_id(char *text, char *scope);
 ptr search_id(char *text, char *scope);
+void change_scope(char* oldscope, char* newscope);
 void print_symtab();
 void cleanup_symtab();
 void init_comtab();

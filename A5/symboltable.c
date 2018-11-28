@@ -85,6 +85,20 @@ ptr search_id(char *text, char *scope)
     return NULL;
 }
 
+void change_scope(char* oldscope, char* newscope){
+    ptr p;
+    int i;
+    for(i=0;i<TABLESIZE;i++){
+        p=symtab[i];
+        while(p!=NULL){
+            if((strcmp(p->scope, oldscope)==0)){
+                strcpy(p->scope, newscope);
+            }
+            p = p->next;
+        }
+    }
+}
+
 void print_symtab()	/* Print Symbol Table */
 {
     ptr p;
