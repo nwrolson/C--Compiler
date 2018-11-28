@@ -156,7 +156,7 @@ int get_offset(char *name){
 
 %type<n> id_list var_decl var_ref init_id_list init_id relop_expr
          relop_term relop_factor expr term factor decl decl_list
-         block relop_expr_list nonempty_relop_expr_list
+         block relop_expr_list nonempty_relop_expr_list stmt
 
 %start program
 
@@ -404,7 +404,7 @@ stmt		: MK_LBRACE block MK_RBRACE
                 printf("la $a0 m%d\n", label);
                 printf("syscall\n");
             } else if (strcmp($1->id, "read")==0){
-                int reg = get_reg()
+                int reg = get_reg();
                 printf("li $v0 5\n");
                 printf("syscall\n");
                 printf("move $%d, $v0\n", reg);
