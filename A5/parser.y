@@ -25,7 +25,7 @@ void gen_prologue(char* name){
 }
 
 void gen_epilogue(char* name){
-    printf("_end_%d:\n", name);
+    printf("_end_%s:\n", name);
     printf("\tlw $ra, 4($fp)\n");
     printf("\tadd $sp, $fp, 4\n");
     printf("\tlw $fp, 0($fp)\n");
@@ -48,6 +48,19 @@ int get_reg(){
         reg_number = 8;
     }
     return reg_number++;
+}
+
+int get_offset(char* id, char* scope){
+    ptr p;
+    p = search_id(id, scope);
+    if(p==NULL){
+        p = search_id(id, "global");
+        if(p==NULL){
+            return 3;
+        }
+        return 5;
+    }
+    return p->offset;
 }
 
 void insert_var(char* id, int arr){
@@ -81,10 +94,13 @@ struct cnst_struct{
  char id[256];
  ptr p;
  int i;
+ int op;
+ int place;
+ struct cnst_struct* con;
 }
 
 %token<id> ID
-%token CONST
+%token<con> CONST
 %token VOID    
 %token INT     
 %token FLOAT   
@@ -121,6 +137,10 @@ struct cnst_struct{
 %token RETURN
 
 %type<i> type dim_decl
+
+%type<place> relop_expr relop_term relop_factor expr term factor var_ref
+
+%type<op> add_op mul_op rel_op
 
 %start program
 
@@ -301,12 +321,12 @@ relop_factor	: expr
 		;
 
 /* Relational operators added.*/
-rel_op		: OP_LT
-		| OP_LE
-		| OP_GT
-		| OP_GE
-		| OP_EQ
-		| OP_NE
+rel_op		: OP_LT {$$ = 0;}
+		| OP_LE {$$ = 1;}
+		| OP_GT {$$ = 2;}
+		| OP_GE {$$ = 3;}
+		| OP_EQ {$$ = 4;}
+		| OP_NE {$$ = 5;}
 		;
 
 relop_expr_list	: nonempty_relop_expr_list 
@@ -318,46 +338,80 @@ nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
 		;
 
 expr		: expr add_op term
+        {
+            int reg = get_reg();
+            if($2==0){
+                printf("\tadd ");
+            }else{
+                printf("\tsub ");
+            }
+            printf("$%d, $%d, $%d\n", reg, $1, $3);
+            $$ = reg;
+        }
 		| term
 		;
 
-add_op		: OP_PLUS
-		| OP_MINUS
+add_op		: OP_PLUS {$$ = 0;}
+		| OP_MINUS {$$ = 1;}
 		;
 
 term		: term mul_op factor
+        {
+            int reg = get_reg();
+            if($2==0){
+                printf("\tmul ");
+            }else{
+                printf("\tdiv ");
+            }
+            printf("$%d, $%d, $%d\n", reg, $1, $3);
+            $$ = reg;
+        }
 		| factor
 		;
 
-mul_op		: OP_TIMES
-		| OP_DIVIDE
+mul_op		: OP_TIMES {$$ = 0;}
+		| OP_DIVIDE {$$ = 1;}
 		;
 
-factor		: MK_LPAREN relop_expr MK_RPAREN
+factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 		/* | -(<relop_expr>) */ 
-		| OP_NOT MK_LPAREN relop_expr MK_RPAREN
+		| OP_NOT MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-(i < 10))".	*/		
-		| OP_MINUS MK_LPAREN relop_expr MK_RPAREN
-		| CONST	
+		| OP_MINUS MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
+		| CONST {$$ = -1;} /*UNIMPLEMENTED*/	
 		/* | - constant, here - is an Unary operator */ 
-		| OP_NOT CONST
+		| OP_NOT CONST {$$ = -1;} /*UNIMPLEMENTED*/
                 /*OP_MINUS condition added as C could have a condition like: "if(-10)".	*/		
-		| OP_MINUS CONST
-		| ID MK_LPAREN relop_expr_list MK_RPAREN
+		| OP_MINUS CONST {$$ = -1;} /*UNIMPLEMENTED*/
+		| ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}/*UNIMPLEMENTED*/
 		/* | - func ( <relop_expr_list> ) */ 
-		| OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN
+		| OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}/*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-read(i))".	*/	
-		| OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN
-		| var_ref
+		| OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}
+		| var_ref {$$ = $1;}
 		/* | - var-reference */ 
-		| OP_NOT var_ref
+		| OP_NOT var_ref {$$ = -1;} /*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-a)".	*/	
-		| OP_MINUS var_ref
+		| OP_MINUS var_ref {$$ = -1;} /*UNIMPLEMENTED*/
 		;
 
-var_ref		: ID 
-		| var_ref dim
-		| var_ref struct_tail
+var_ref		: ID {
+                    int offset, reg;
+                    reg = get_reg();
+                    offset = get_offset($1, current_scope);
+                    if(offset == 3){
+                        printf("Error, ID '%s' not declared in this scope.\n", $1);
+                        $$ = -1;
+                    }else if(offset == 5){
+                        printf("\tlw %d, _%s\n", reg, $1);
+                        $$ = reg;
+                    }else {
+                        printf("\tlw %d, %d($fp)\n", reg, offset);
+                        $$ = reg;
+                    }
+                 }
+		| var_ref dim /*UNIMPLEMENTED*/
+		| var_ref struct_tail /*UNIMPLEMENTED*/
 		;
 
 
