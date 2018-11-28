@@ -36,7 +36,7 @@ void gen_epilogue(char* name){
         printf("\t jr $ra\n");
     }
     printf(".data\n");
-    printf("_framesize_%s\n:\t.word\t%d", name, ARoffset);
+    printf("_framesize_%s\n:\t.word\t%d", name, -ARoffset);
 }
 
 void gen_head(char* name){
@@ -48,6 +48,25 @@ int get_reg(){
         reg_number = 8;
     }
     return reg_number++;
+}
+
+void insert_var(char* id, int arr){
+    ptr p;
+    p = search_id(id, current_scope);
+    if (p!=NULL){
+        printf("Error, ID '%s' already declared in scope.\n", id);
+        return;
+    }
+    insert_id(id, current_scope);
+    p = search_id(id, current_scope);
+    if(p!=NULL){
+        p -> size = current_type*arr;
+        p -> fun = 0;
+        if(strcmp(current_scope, "global")){
+            p->offset = ARoffset;
+            ARoffset -= p->size;
+        }
+    }
 }
 
 struct cnst_struct{
@@ -219,23 +238,19 @@ init_id_list	: init_id
 		;
 
 init_id		: ID {
-                    ptr p;
-                    insert_id($1);
-                    p = search_id($1);
-                    if(p!=NULL){
-                        p -> size = current_type;
-                        p -> fun = 0;
-                        strcpy(p -> scope, current_scope);
+                    insert_var($1, 1);
+                    if(strcmp(current_scope, "global")==0){
+                        printf("\t.data\n");
+                        printf("\t.align 2\n");
+                        printf("_%s:\t.space %d", current_type);
                     }
                  }
 		| ID dim_decl {
-                        ptr p;
-                        insert_id($1);
-                        p = search_id($1);
-                        if(p!=NULL){
-                            p -> size = current_type*$2;
-                            p -> fun = 0;
-                            strcpy(p -> scope, current_scope);
+                        insert_var($1, $2);
+                        if(strcmp(current_scope, "global")==0){
+                            printf("\t.data\n");
+                            printf("\t.align 2\n");
+                            printf("_%s:\t.space %d", current_type*$2);
                         }
                       }
 		| ID OP_ASSIGN relop_expr

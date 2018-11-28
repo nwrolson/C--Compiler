@@ -99,7 +99,7 @@ void gen_epilogue(char* name){
         printf("\t jr $ra\n");
     }
     printf(".data\n");
-    printf("_framesize_%s\n:\t.word\t%d", name, ARoffset);
+    printf("_framesize_%s\n:\t.word\t%d", name, -ARoffset);
 }
 
 void gen_head(char* name){
@@ -113,6 +113,25 @@ int get_reg(){
     return reg_number++;
 }
 
+void insert_var(char* id, int arr){
+    ptr p;
+    p = search_id(id, current_scope);
+    if (p!=NULL){
+        printf("Error, ID '%s' already declared in scope.\n", id);
+        return;
+    }
+    insert_id(id, current_scope);
+    p = search_id(id, current_scope);
+    if(p!=NULL){
+        p -> size = current_type*arr;
+        p -> fun = 0;
+        if(strcmp(current_scope, "global")){
+            p->offset = ARoffset;
+            ARoffset -= p->size;
+        }
+    }
+}
+
 struct cnst_struct{
     int i;
     float f;
@@ -120,7 +139,7 @@ struct cnst_struct{
 };
 
 
-#line 124 "parser.tab.c" /* yacc.c:339  */
+#line 143 "parser.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -196,13 +215,13 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 61 "parser.y" /* yacc.c:355  */
+#line 80 "parser.y" /* yacc.c:355  */
 
  char id[256];
  ptr p;
  int i;
 
-#line 206 "parser.tab.c" /* yacc.c:355  */
+#line 225 "parser.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -219,7 +238,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 223 "parser.tab.c" /* yacc.c:358  */
+#line 242 "parser.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -520,19 +539,19 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   113,   113,   116,   117,   120,   121,   124,   124,   127,
-     127,   129,   130,   133,   134,   137,   138,   139,   140,   143,
-     146,   147,   150,   151,   154,   155,   156,   157,   160,   161,
-     164,   165,   168,   169,   170,   171,   174,   174,   175,   176,
-     180,   181,   182,   183,   186,   190,   191,   192,   193,   194,
-     198,   199,   200,   201,   203,   204,   206,   207,   209,   210,
-     213,   214,   217,   218,   221,   231,   241,   244,   245,   248,
-     250,   251,   253,   255,   257,   258,   259,   260,   261,   262,
-     265,   266,   269,   270,   272,   273,   276,   277,   280,   281,
-     284,   285,   289,   290,   291,   292,   293,   294,   297,   298,
-     301,   302,   305,   306,   309,   310,   313,   314,   317,   318,
-     321,   323,   325,   326,   328,   330,   331,   333,   335,   336,
-     338,   340,   343,   344,   345,   349,   352
+       0,   132,   132,   135,   136,   139,   140,   143,   143,   146,
+     146,   148,   149,   152,   153,   156,   157,   158,   159,   162,
+     165,   166,   169,   170,   173,   174,   175,   176,   179,   180,
+     183,   184,   187,   188,   189,   190,   193,   193,   194,   195,
+     199,   200,   201,   202,   205,   209,   210,   211,   212,   213,
+     217,   218,   219,   220,   222,   223,   225,   226,   228,   229,
+     232,   233,   236,   237,   240,   248,   256,   259,   260,   263,
+     265,   266,   268,   270,   272,   273,   274,   275,   276,   277,
+     280,   281,   284,   285,   287,   288,   291,   292,   295,   296,
+     299,   300,   304,   305,   306,   307,   308,   309,   312,   313,
+     316,   317,   320,   321,   324,   325,   328,   329,   332,   333,
+     336,   338,   340,   341,   343,   345,   346,   348,   350,   351,
+     353,   355,   358,   359,   360,   364,   367
 };
 #endif
 
@@ -1480,91 +1499,87 @@ yyreduce:
   switch (yyn)
     {
         case 7:
-#line 124 "parser.y" /* yacc.c:1646  */
+#line 143 "parser.y" /* yacc.c:1646  */
     {strcpy(current_scope, (yyvsp[-3].id));}
-#line 1486 "parser.tab.c" /* yacc.c:1646  */
+#line 1505 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 9:
-#line 127 "parser.y" /* yacc.c:1646  */
+#line 146 "parser.y" /* yacc.c:1646  */
     {strcpy(current_scope, (yyvsp[-2].id));}
-#line 1492 "parser.tab.c" /* yacc.c:1646  */
+#line 1511 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 174 "parser.y" /* yacc.c:1646  */
+#line 193 "parser.y" /* yacc.c:1646  */
     {current_type = (yyvsp[0].i);}
-#line 1498 "parser.tab.c" /* yacc.c:1646  */
+#line 1517 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 180 "parser.y" /* yacc.c:1646  */
+#line 199 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = 4;}
-#line 1504 "parser.tab.c" /* yacc.c:1646  */
+#line 1523 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 181 "parser.y" /* yacc.c:1646  */
+#line 200 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = 8;}
-#line 1510 "parser.tab.c" /* yacc.c:1646  */
+#line 1529 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 182 "parser.y" /* yacc.c:1646  */
+#line 201 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = 0;}
-#line 1516 "parser.tab.c" /* yacc.c:1646  */
+#line 1535 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 183 "parser.y" /* yacc.c:1646  */
+#line 202 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = -1;}
-#line 1522 "parser.tab.c" /* yacc.c:1646  */
+#line 1541 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 203 "parser.y" /* yacc.c:1646  */
+#line 222 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = 1;}
-#line 1528 "parser.tab.c" /* yacc.c:1646  */
+#line 1547 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 204 "parser.y" /* yacc.c:1646  */
+#line 223 "parser.y" /* yacc.c:1646  */
     {(yyval.i) = 1 + (yyvsp[-3].i);}
-#line 1534 "parser.tab.c" /* yacc.c:1646  */
+#line 1553 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 221 "parser.y" /* yacc.c:1646  */
+#line 240 "parser.y" /* yacc.c:1646  */
     {
-                    ptr p;
-                    insert_id((yyvsp[0].id));
-                    p = search_id((yyvsp[0].id));
-                    if(p!=NULL){
-                        p -> size = current_type;
-                        p -> fun = 0;
-                        strcpy(p -> scope, current_scope);
+                    insert_var((yyvsp[0].id), 1);
+                    if(strcmp(current_scope, "global")==0){
+                        printf("\t.data\n");
+                        printf("\t.align 2\n");
+                        printf("_%s:\t.space %d", current_type);
                     }
                  }
-#line 1549 "parser.tab.c" /* yacc.c:1646  */
+#line 1566 "parser.tab.c" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 231 "parser.y" /* yacc.c:1646  */
+#line 248 "parser.y" /* yacc.c:1646  */
     {
-                        ptr p;
-                        insert_id((yyvsp[-1].id));
-                        p = search_id((yyvsp[-1].id));
-                        if(p!=NULL){
-                            p -> size = current_type*(yyvsp[0].i);
-                            p -> fun = 0;
-                            strcpy(p -> scope, current_scope);
+                        insert_var((yyvsp[-1].id), (yyvsp[0].i));
+                        if(strcmp(current_scope, "global")==0){
+                            printf("\t.data\n");
+                            printf("\t.align 2\n");
+                            printf("_%s:\t.space %d", current_type*(yyvsp[0].i));
                         }
                       }
-#line 1564 "parser.tab.c" /* yacc.c:1646  */
+#line 1579 "parser.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1568 "parser.tab.c" /* yacc.c:1646  */
+#line 1583 "parser.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1792,7 +1807,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 354 "parser.y" /* yacc.c:1906  */
+#line 369 "parser.y" /* yacc.c:1906  */
 
 #include "lex.yy.c"
 

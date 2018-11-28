@@ -45,33 +45,38 @@ void init_symtab()	/* Initialize Symbol Table */
     return;
 }
 
-void insert_id(char *text)	/* Populate Symbol Table */
+void insert_id(char *text, char *scope)	/* Populate Symbol Table */
 {
     int val=hash(text);
     ptr p=symtab[val],q;
-    if(p==NULL)    //insert new element
+    if(p==NULL){    //insert new element
         symtab[val]=getnode(text);
+        strcpy(symtab[val]->scope, scope);
+    }
     else{
-        while(p!=NULL && strcmp(p->id,text)){
+        while(p!=NULL && strcmp(p->id,text) && strcmp(p->scope,scope)){
             q=p;
             p=p->next;
         }
-        if(p==NULL)
+        if(p==NULL){
             q->next=getnode(text);
-        else
+            strcpy(q->next->scope, scope);
+        }
+        else{
             p->freq++; 
+        }
     }
     return;
 }
 
-ptr search_id(char *text)
+ptr search_id(char *text, char *scope)
 {
     ptr p;
     int i;
     for(i=0;i<TABLESIZE;i++){
         p=symtab[i];
         while(p!=NULL){
-            if(strcmp(p->id, text)==0){
+            if((strcmp(p->id, text)==0)&&(strcmp(p->scope, scope)==0)){
                 return p;
             }
             p = p->next;
@@ -84,11 +89,11 @@ void print_symtab()	/* Print Symbol Table */
 {
     ptr p;
     int i;
-    printf("ID\tFreq\tSize\tScope\n");
+    printf("ID\tFreq\tSize\tOffset\tScope\n");
     for(i=0;i<TABLESIZE;i++){
         p=symtab[i];
         while(p!=NULL){
-            printf("%s\t%d\t%d\t%s\n",p->id,p->freq,p->size,p->scope);
+            printf("%s\t%d\t%d\t%d\t%s\n",p->id,p->freq,p->size, p->offset, p->scope);
             p=p->next;
         }
     }
