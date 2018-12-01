@@ -82,9 +82,33 @@ error    .
 {op_minus}      {tokens++;return OP_MINUS;}
 {op_times}      {tokens++;return OP_TIMES;}
 {op_divide}     {tokens++;return OP_DIVIDE;}
-{int-const}	    {tokens++;return CONST;}
-{flt-const}	    {tokens++;return CONST;}
-{s-const}	    {tokens++;return CONST;}
+{int-const}	    {
+                    tokens++;
+                    struct cnst_struct *p;
+                    p = (struct cnst_struct *) malloc(sizeof(struct cnst_struct));
+                    p->type = 1;
+                    p->i = atoi(yytext);
+                    yylval.con = p;
+                    return CONST;
+                }
+{flt-const}	    {
+                    tokens++;
+                    struct cnst_struct *p;
+                    p = (struct cnst_struct *) malloc(sizeof(struct cnst_struct));
+                    p->type = 2;
+                    p->f = atof(yytext);
+                    yylval.con = p;
+                    return CONST;
+                }
+{s-const}	    {
+                    tokens++;
+                    struct cnst_struct *p;
+                    p = (struct cnst_struct *) malloc(sizeof(struct cnst_struct));
+                    p->type = 3;
+                    strcpy(p->s, yytext);
+                    yylval.con = p;
+                    return CONST;
+                }
 {mk_lparen}     {tokens++;return MK_LPAREN;}
 {mk_rparen}     {tokens++;return MK_RPAREN;}
 {mk_lbrace}     {tokens++;return MK_LBRACE;}

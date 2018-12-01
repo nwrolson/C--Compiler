@@ -82,6 +82,7 @@ void insert_var(char* id, int arr){
 }
 
 struct cnst_struct{
+    int type;
     int i;
     float f;
     char s[256];
@@ -174,6 +175,7 @@ function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE {
             gen_head($2);
             gen_prologue($2);
             strcpy(current_scope, $2);
+            printf("Scope set\n");
         } block {
             gen_epilogue($2);
         } MK_RBRACE {strcpy(current_scope, "global");}
@@ -262,8 +264,8 @@ id_list		: ID
 		| id_list MK_COMMA ID dim_decl
 		| ID dim_decl
 		;
-dim_decl	: MK_LB cexpr MK_RB {$$ = 1;}
-		| dim_decl MK_LB cexpr MK_RB {$$ = 1 + $1;}
+dim_decl	: MK_LB cexpr MK_RB {/*$$ = 1;*/} /*TODO: Get correct values*/
+		| dim_decl MK_LB cexpr MK_RB {/*$$ = 1 + $1;*/}
 		;
 cexpr		: cexpr add_op mcexpr
 		| mcexpr
@@ -289,14 +291,34 @@ init_id		: ID {
                     }
                  }
 		| ID dim_decl {
-                        insert_var($1, $2);
-                        if(strcmp(current_scope, "global")==0){
-                            printf("\t.data\n");
-                            printf("\t.align 2\n");
-                            printf("_%s:\t.space %d", $1, current_type*$2);
-                        }
-                      }
-		| ID OP_ASSIGN relop_expr
+            insert_var($1, $2);
+            if(strcmp(current_scope, "global")==0){
+                printf("\t.data\n");
+                printf("\t.align 2\n");
+                printf("_%s:\t.space %d", $1, current_type*$2);
+            }
+          }
+        /*| ID OP_ASSIGN relop_expr*/
+		| ID OP_ASSIGN CONST {
+            insert_var($1, 1);
+            if(strcmp(current_scope, "global")==0){
+                printf("\t.data\n");
+                printf("\t.align 2\n");
+                printf("_%s:\t.space %d", $1, current_type);
+            }
+            int reg = get_reg();
+            if($3->type == 1){
+                printf("\tli $%d, %d\n", reg, $3->i);
+            } else if ($3->type == 2){
+                printf("\tli $%d, %f\n", reg, $3->f);
+            }
+            if(strcmp(current_scope, "global")==0){
+                printf("\tsw $%d, _%s\n", reg, $1);
+            } else {
+                int offset = get_offset($1, current_scope);
+                printf("\tsw $%d, %d($fp)\n", reg, offset);
+            }
+          }
 		;
 
 stmt_list	: stmt_list stmt
@@ -401,7 +423,17 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 		| OP_NOT MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-(i < 10))".	*/		
 		| OP_MINUS MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
-		| CONST {$$ = -1;} /*UNIMPLEMENTED*/	
+		| CONST {
+                    int reg=get_reg();
+                    if($1->type == 1){
+                        printf("\tli $%d, %d\n", reg, $1->i);
+                        $$ = reg;
+                    }
+                    if($1->type == 3){
+                        printf("\t.data\n");
+                        printf("Label:\t.ascii\t%s", $1->s); /*TODO: Make label generator. Make method to pass string literal labels*/
+                    }
+                } /*UNIMPLEMENTED*/	
 		/* | - constant, here - is an Unary operator */ 
 		| OP_NOT CONST {$$ = -1;} /*UNIMPLEMENTED*/
                 /*OP_MINUS condition added as C could have a condition like: "if(-10)".	*/		
