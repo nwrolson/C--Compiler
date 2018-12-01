@@ -103,11 +103,11 @@ void print_symtab()	/* Print Symbol Table */
 {
     ptr p;
     int i;
-    printf("ID\tFreq\tSize\tOffset\tScope\n");
+    printf("#ID\tFreq\tSize\tOffset\tScope\n");
     for(i=0;i<TABLESIZE;i++){
         p=symtab[i];
         while(p!=NULL){
-            printf("%s\t%d\t%d\t%d\t%s\n",p->id,p->freq,p->size, p->offset, p->scope);
+            printf("#%s\t%d\t%d\t%d\t%s\n",p->id,p->freq,p->size, p->offset, p->scope);
             p=p->next;
         }
     }

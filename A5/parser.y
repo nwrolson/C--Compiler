@@ -94,6 +94,11 @@ struct cnst_struct{
     char s[256];
 };
 
+struct var_ref{
+    int offset;
+    char id[256];
+};
+
 %}
 
 %union {
@@ -103,6 +108,7 @@ struct cnst_struct{
  int op;
  int place;
  struct cnst_struct* con;
+ struct var_ref* var;
 }
 
 %token<id> ID
@@ -144,7 +150,9 @@ struct cnst_struct{
 
 %type<i> type dim_decl dim_fn dimfn1 struct_type
 
-%type<place> relop_expr relop_term relop_factor expr term factor var_ref
+%type<place> relop_expr relop_term relop_factor expr term factor
+
+%type<var> var_ref
 
 %type<op> add_op mul_op rel_op
 
@@ -167,7 +175,7 @@ global_decl	: decl_list function_decl
 		;
 
 function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE {
-                    ARoffset = -4;
+                    ARoffset = -4; /*TODO: Fix AR offset for parameters*/
                     gen_head($2);
                     gen_prologue($2);
                     strcpy(current_scope, $2);
@@ -181,7 +189,6 @@ function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE {
             gen_head($2);
             gen_prologue($2);
             strcpy(current_scope, $2);
-            printf("Scope set\n");
         } block {
             gen_epilogue($2);
         } MK_RBRACE {strcpy(current_scope, "global");}
@@ -341,7 +348,13 @@ stmt		: MK_LBRACE block MK_RBRACE
 		| IF MK_LPAREN relop_expr MK_RPAREN stmt 
 		/* | read and write library calls -- note that read/write are not keywords */ 
 		| ID MK_LPAREN relop_expr_list MK_RPAREN
-		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON 
+		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
+            if($1->offset != 5){
+                printf("\tsw $%d, %d($fp)\n", $3, $1->offset);
+            } else {
+                printf("\tsw $%d, _%s\n", $3, $1->id);
+            }
+          }
 		| relop_expr_list MK_SEMICOLON
 		| MK_SEMICOLON
 		| RETURN MK_SEMICOLON
@@ -355,20 +368,71 @@ assign_expr_list : nonempty_assign_expr_list
 nonempty_assign_expr_list        : nonempty_assign_expr_list MK_COMMA assign_expr
                 | assign_expr
 
-assign_expr     : ID OP_ASSIGN relop_expr 
+assign_expr     : ID OP_ASSIGN relop_expr {
+                    int offset = get_offset($1, current_scope);
+                    printf("\tsw $%d, %d($fp)\n", $3, offset);
+                }
                 | relop_expr
 
 
 relop_expr	: relop_term
-		| relop_expr OP_OR relop_term
+		| relop_expr OP_OR relop_term {
+            int label = get_label();
+            int reg = get_reg();
+            printf("\tbnez $%d, T%d\n", $1, label); //If first statement is true, jump to true label
+            printf("\tbnez $%d, T%d\n", $3, label); //If second statement is true, jump to true label
+            printf("F%d:\n", label); //False label
+            printf("\tli $%d, 0\n", reg); //Set register to false
+            printf("\tj E%d\n", label); //Jump to exit
+            printf("T%d:\n", label); //True label
+            printf("\tli $%d, 1\n", reg); //Set register to true
+            printf("E%d:\n", label); //Exit label
+            $$ = reg;
+          }
 		;
 
 relop_term	: relop_factor
-		| relop_term OP_AND relop_factor
+		| relop_term OP_AND relop_factor {
+            int label = get_label();
+            int reg = get_reg();
+            printf("\tbeqz $%d, F%d\n", $1, label); //If first statement is false, jump to false label
+            printf("\tbeqz $%d, F%d\n", $3, label); //If second statement is false, jump to false label
+            printf("T%d:\n", label); //True label
+            printf("\tli $%d, 1\n", reg); //Set register to true
+            printf("\tj E%d\n", label); //Jump to exit
+            printf("F%d:\n", label); //False label
+            printf("\tli $%d, 0\n", reg); //Set register to false
+            printf("E%d:\n", label); //Exit label
+            $$ = reg;
+        }
 		;
 
 relop_factor	: expr
-		| expr rel_op expr
+		| expr rel_op expr{
+            int reg = get_reg();
+            switch($2){
+                case 0:
+                    printf("\tslt ");
+                    break;
+                case 1:
+                    printf("\tsle ");
+                    break;
+                case 2:
+                    printf("\tsgt ");
+                    break;
+                case 3:
+                    printf("\tsge ");
+                    break;
+                case 4:
+                    printf("\tseq ");
+                    break;
+                case 5:
+                    printf("\tsne ");
+                    break;
+            }
+            printf("$%d, $%d, $%d\n", reg, $1, $3);
+            $$ = reg;
+          }
 		;
 
 /* Relational operators added.*/
@@ -449,7 +513,19 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 		| OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}/*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-read(i))".	*/	
 		| OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}
-		| var_ref {$$ = $1;}
+		| var_ref {
+            int reg = get_reg();
+            if($1->offset == 3){
+                printf("Error, ID not declared in this scope.\n");
+                $$ = -1;
+            }else if($1->offset == 5){
+                printf("\tlw $%d, _%s\n", reg, $1->id);
+                $$ = reg;
+            }else {
+                printf("\tlw $%d, %d($fp)\n", reg, $1->offset);
+                $$ = reg;
+            }
+        }
 		/* | - var-reference */ 
 		| OP_NOT var_ref {$$ = -1;} /*UNIMPLEMENTED*/
                 /* OP_MINUS condition added as C could have a condition like: "if(-a)".	*/	
@@ -457,22 +533,14 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 		;
 
 var_ref		: ID {
-                    int offset, reg;
-                    reg = get_reg();
-                    offset = get_offset($1, current_scope);
-                    if(offset == 3){
-                        printf("Error, ID '%s' not declared in this scope.\n", $1);
-                        $$ = -1;
-                    }else if(offset == 5){
-                        printf("\tlw %d, _%s\n", reg, $1);
-                        $$ = reg;
-                    }else {
-                        printf("\tlw %d, %d($fp)\n", reg, offset);
-                        $$ = reg;
-                    }
-                 }
-		| var_ref dim /*UNIMPLEMENTED*/
-		| var_ref struct_tail /*UNIMPLEMENTED*/
+                struct var_ref *p;
+                p = (struct var_ref *) malloc(sizeof(struct var_ref));
+                p->offset = get_offset($1, current_scope);
+                strcpy(p->id, $1);
+                $$ = p;
+            }
+		| var_ref dim {$$ = NULL;} /*UNIMPLEMENTED*/
+		| var_ref struct_tail{$$ = NULL;} /*UNIMPLEMENTED*/
 		;
 
 
