@@ -109,6 +109,7 @@ struct var_ref{
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
+ int dim;
 }
 
 %token<id> ID
@@ -149,12 +150,10 @@ struct var_ref{
 %token RETURN
 
 %type<i> type dim_decl dim_fn dimfn1 struct_type
-
 %type<place> relop_expr relop_term relop_factor expr term factor
-
 %type<var> var_ref
-
 %type<op> add_op mul_op rel_op
+%type<dim> cexpr mcexpr cfactor
 
 %start program
 
@@ -277,18 +276,18 @@ id_list		: ID
 		| id_list MK_COMMA ID dim_decl
 		| ID dim_decl
 		;
-dim_decl	: MK_LB cexpr MK_RB {/*$$ = 1;*/} /*TODO: Get correct values*/
-		| dim_decl MK_LB cexpr MK_RB {/*$$ = 1 + $1;*/}
+dim_decl	: MK_LB cexpr MK_RB {$$ = $2;}
+		| dim_decl MK_LB cexpr MK_RB {$$ = $1 + $3;}
 		;
-cexpr		: cexpr add_op mcexpr
-		| mcexpr
+cexpr		: cexpr add_op mcexpr {$$ = $1 + $3;}
+		| mcexpr {$$ = $1;}
 		;  
-mcexpr		: mcexpr mul_op cfactor
-		| cfactor 
+mcexpr		: mcexpr mul_op cfactor {$$ = $1 * $3;}
+		| cfactor {$$ = $1;}
 		;
 
-cfactor:	CONST 
-		| MK_LPAREN cexpr MK_RPAREN
+cfactor:	CONST {$$ = $1->i;}
+		| MK_LPAREN cexpr MK_RPAREN {$$ = $2;}
 		;
 
 init_id_list	: init_id
