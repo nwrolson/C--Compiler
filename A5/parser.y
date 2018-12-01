@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symboltable.h"
+#include "stack.h"
 
 static int linenumber = 1;
 
@@ -12,6 +13,11 @@ int ARoffset;
 int reg_number = 8;
 int current_type;
 char current_scope[256] = "global";
+int current_label=0;
+
+int get_label(){
+    return current_label++;
+}
 
 void gen_prologue(char* name){
     printf("\tsw $ra, 0($sp)\n");
@@ -328,7 +334,7 @@ stmt_list	: stmt_list stmt
 stmt		: MK_LBRACE block MK_RBRACE
 		/* | While Statement here */
 		| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
-	        | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
+	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
 		/* | If then else here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN stmt ELSE stmt
 		/* | If statement here */ 
