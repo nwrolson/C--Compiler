@@ -99,6 +99,14 @@ struct var_ref{
     char id[256];
 };
 
+struct index_type {
+    int cnt;
+    int Vp;
+    int base_address;
+    int dim_size[10];
+    int dims;
+}
+
 %}
 
 %union {
@@ -109,6 +117,7 @@ struct var_ref{
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
+ struct index_type idx;
  int dim;
 }
 
@@ -154,6 +163,7 @@ struct var_ref{
 %type<var> var_ref
 %type<op> add_op mul_op rel_op
 %type<dim> cexpr mcexpr cfactor
+%type<idx> dim
 
 %start program
 
@@ -340,7 +350,24 @@ stmt_list	: stmt_list stmt
 stmt		: MK_LBRACE block MK_RBRACE
 		/* | While Statement here */
 		| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
-	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list MK_SEMICOLON assign_expr_list MK_RPAREN stmt 
+	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list{
+            int label = get_label();
+            push(label);
+            printf("_Test%d:\n", label);
+            printf("\tbeqz $%d, _Exit%d\n", $5, label);
+            
+          } MK_SEMICOLON {
+            int label = peek();
+            printf("\tj _Body%d\n", label);
+            printf("_Inc%d:\n", label);
+          } assign_expr_list{
+            printf("\tj _Test%d\n", label);
+            printf("_Body%d:\n", label);            
+          } MK_RPAREN stmt {
+            int label = pop();
+            printf("\tj _Inc%d", label);
+            printf("_Exit%d:\n", label);
+          }
 		/* | If then else here */ 
 		| IF MK_LPAREN relop_expr MK_RPAREN stmt ELSE stmt
 		/* | If statement here */ 
@@ -499,10 +526,12 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
                         $$ = reg;
                     }
                     if($1->type == 3){
+                        int label = get_label();
                         printf("\t.data\n");
-                        printf("Label:\t.ascii\t%s", $1->s); /*TODO: Make label generator. Make method to pass string literal labels*/
+                        printf("String%d:\t.ascii\t%s", label, $1->s);
+                        $$ = label;
                     }
-                } /*UNIMPLEMENTED*/	
+                }	
 		/* | - constant, here - is an Unary operator */ 
 		| OP_NOT CONST {$$ = -1;} /*UNIMPLEMENTED*/
                 /*OP_MINUS condition added as C could have a condition like: "if(-10)".	*/		
@@ -538,12 +567,18 @@ var_ref		: ID {
                 strcpy(p->id, $1);
                 $$ = p;
             }
-		| var_ref dim {$$ = NULL;} /*UNIMPLEMENTED*/
+		| var_ref dim {
+            $$ = NULL;
+          } /*UNIMPLEMENTED*/
 		| var_ref struct_tail{$$ = NULL;} /*UNIMPLEMENTED*/
 		;
 
 
-dim		: MK_LB expr MK_RB
+dim		: MK_LB expr MK_RB {
+
+          }
+        | dim MK_LB expr MK_RB {
+          }
 		;
 
 struct_tail	: MK_DOT ID
