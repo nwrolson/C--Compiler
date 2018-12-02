@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symboltable.h"
-#include "stack.h"
 
 static int linenumber = 1;
 
@@ -14,6 +13,24 @@ int reg_number = 8;
 int current_type;
 char current_scope[256] = "global";
 int current_label=0;
+
+int stack[100];
+int top;
+
+void push(int i){
+    stack[top] = i;
+    top++;
+}
+
+int peek() {
+    return stack[top];
+}
+
+int pop() {
+    int out = stack[top];
+    top--;
+    return out;
+}
 
 int get_label(){
     return current_label++;
@@ -99,13 +116,10 @@ struct var_ref{
     char id[256];
 };
 
-struct index_type {
-    int cnt;
-    int Vp;
-    int base_address;
-    int dim_size[10];
-    int dims;
-}
+struct dim_lst{
+    int dim;
+    struct dim_lst * next;
+};
 
 %}
 
@@ -117,7 +131,6 @@ struct index_type {
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
- struct index_type idx;
  int dim;
 }
 
@@ -159,7 +172,7 @@ struct index_type {
 %token RETURN
 
 %type<i> type dim_decl dim_fn dimfn1 struct_type
-%type<place> relop_expr relop_term relop_factor expr term factor
+%type<place> relop_expr relop_term relop_factor expr term factor relop_expr_list
 %type<var> var_ref
 %type<op> add_op mul_op rel_op
 %type<dim> cexpr mcexpr cfactor
@@ -361,6 +374,7 @@ stmt		: MK_LBRACE block MK_RBRACE
             printf("\tj _Body%d\n", label);
             printf("_Inc%d:\n", label);
           } assign_expr_list{
+            int label = peek();
             printf("\tj _Test%d\n", label);
             printf("_Body%d:\n", label);            
           } MK_RPAREN stmt {
