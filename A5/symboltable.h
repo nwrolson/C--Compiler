@@ -7,8 +7,10 @@ struct node{	/* Structure for Identifiers */
     int return_type;	/*Return type of the function*/
     struct node *next;
     int offset;
-    int place;
+//    int place;
     int size;
+    int dims;
+    int dimsize[10];
 };
 
 typedef struct node* ptr;

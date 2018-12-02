@@ -117,7 +117,8 @@ struct var_ref{
 };
 
 struct dim_lst{
-    int dim;
+    int dimidx;
+    int dimsize;
     struct dim_lst * next;
 };
 
@@ -131,7 +132,7 @@ struct dim_lst{
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
- int dim;
+ struct dim_lst* dim;
 }
 
 %token<id> ID
@@ -171,12 +172,11 @@ struct dim_lst{
 %token ERROR
 %token RETURN
 
-%type<i> type dim_decl dim_fn dimfn1 struct_type
-%type<place> relop_expr relop_term relop_factor expr term factor relop_expr_list
+%type<i> type dim_fn dimfn1 struct_type cexpr mcexpr cfactor
+%type<place> relop_expr relop_term relop_factor expr term factor relop_expr_list nonempty_relop_expr_list
 %type<var> var_ref
 %type<op> add_op mul_op rel_op
-%type<dim> cexpr mcexpr cfactor
-%type<idx> dim
+%type<dim> dim_decl
 
 %start program
 
@@ -299,8 +299,22 @@ id_list		: ID
 		| id_list MK_COMMA ID dim_decl
 		| ID dim_decl
 		;
-dim_decl	: MK_LB cexpr MK_RB {$$ = $2;}
-		| dim_decl MK_LB cexpr MK_RB {$$ = $1 + $3;}
+dim_decl	: MK_LB cexpr MK_RB {
+                struct dim_lst * p;
+                p = (struct dim_lst*) malloc(sizeof(struct dim_lst));
+                p -> dimidx = 0;
+                p -> dimsize = $2;
+                p -> next = NULL;
+                $$ = p;
+              }
+		| dim_decl MK_LB cexpr MK_RB {
+            struct dim_lst * p;
+            p = (struct dim_lst*) malloc(sizeof(struct dim_lst));
+            p -> dimidx = ++$1->dimidx;
+            p -> dimsize = $3;
+            p -> next = $1;
+            $$ = p;
+          }
 		;
 cexpr		: cexpr add_op mcexpr {$$ = $1 + $3;}
 		| mcexpr {$$ = $1;}
@@ -326,11 +340,26 @@ init_id		: ID {
                     }
                  }
 		| ID dim_decl {
-            insert_var($1, $2);
+            int arr_space = 0;
+            struct dim_lst* p = $2;
+            while(p != NULL){
+                arr_space += p->dimsize;
+                p = p->next;
+            }
+            insert_var($1, arr_space);
+            ptr q = search_id($1, current_scope);
+            if(q!=NULL){
+                p = $2;
+                q->dims = 0;
+                while(p != NULL){
+                    q->dims++;
+                    q->dimsize[p->dimidx] = p->dimsize;
+                }
+            }
             if(strcmp(current_scope, "global")==0){
                 printf("\t.data\n");
                 printf("\t.align 2\n");
-                printf("_%s:\t.space %d", $1, current_type*$2);
+                printf("_%s:\t.space %d", $1, current_type*arr_space);
             }
           }
         /*| ID OP_ASSIGN relop_expr*/
@@ -485,7 +514,7 @@ rel_op		: OP_LT {$$ = 0;}
 		;
 
 relop_expr_list	: nonempty_relop_expr_list 
-		| 
+		| {$$ = -1;}
 		;
 
 nonempty_relop_expr_list	: nonempty_relop_expr_list MK_COMMA relop_expr
