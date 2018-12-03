@@ -14,7 +14,7 @@ struct cnst_struct{
 };
 
 struct var_ref{
-    int offset;
+    int reg;
     char id[256];
 };
 
@@ -24,13 +24,13 @@ struct dim_lst{
     struct dim_lst * next;
 };
 
-struct index_type(
+struct index_type{
     int cnt;
     int Vp;
     int base_address;
     int dim_size[10];
     int dims;
-);
+};
 
 static int linenumber = 1;
 
@@ -106,9 +106,9 @@ int get_offset(char* id, char* scope){
     if(p==NULL){
         p = search_id(id, "global");
         if(p==NULL){
-            return 3;
+            return -3;
         }
-        return 5;
+        return -5;
     }
     return p->offset;
 }
@@ -141,7 +141,7 @@ void insert_var(char* id, int arr){
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
- struct dim_list* dim;
+ struct dim_lst* dim;
  struct index_type* idxtype;
 }
 
@@ -430,8 +430,8 @@ stmt		: MK_LBRACE block MK_RBRACE
 		/* | read and write library calls -- note that read/write are not keywords */ 
 		| ID MK_LPAREN relop_expr_list MK_RPAREN
 		| var_ref OP_ASSIGN relop_expr MK_SEMICOLON{
-            if($1->offset != 5){
-                printf("\tsw $%d, %d($fp)\n", $3, $1->offset);
+            if($1->reg != -5){
+                printf("\tsw $%d, 0($%d)\n", $3, $1->reg); //$1->reg contains the address of the variable.
             } else {
                 printf("\tsw $%d, _%s\n", $3, $1->id);
             }
@@ -598,16 +598,8 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 		| OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}
 		| var_ref {
             int reg = get_reg();
-            if($1->offset == 3){
-                printf("Error, ID not declared in this scope.\n");
-                $$ = -1;
-            }else if($1->offset == 5){
-                printf("\tlw $%d, _%s\n", reg, $1->id);
-                $$ = reg;
-            }else {
-                printf("\tlw $%d, %d($fp)\n", reg, $1->offset);
-                $$ = reg;
-            }
+            printf("\tlw $%d, 0($%d)\n", reg, $1->reg);
+            $$ = reg;
         }
 		/* | - var-reference */ 
 		| OP_NOT var_ref {$$ = -1;} /*UNIMPLEMENTED*/
@@ -618,22 +610,36 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
 var_ref		: ID {
                 struct var_ref *p;
                 p = (struct var_ref *) malloc(sizeof(struct var_ref));
-                p->offset = get_offset($1, current_scope);
                 strcpy(p->id, $1);
+                int offset = get_offset($1, current_scope);
+                int reg = get_reg();
+                if(offset == -3){
+                    printf("ID %s not declared in scope\n", $1);
+                    p = NULL;
+                } else if(offset == -5){
+                    printf("\tla $%d, _%s\n", reg, $1);
+                } else {
+                    printf("\tla $%d, %d($fp)\n", reg, offset);
+                    p->reg = reg;
+                }
                 $$ = p;
             }
 		| var_ref {arr_ref = $1;} dim {
             ptr p = search_id($1->id, current_scope);
-            if(p == NULL){
-                return;
+            if(p != NULL){
+                int reg1 = get_reg();
+                int reg2 = get_reg();
+                printf("\tmul $%d, $%d, %d\n", $3->Vp, $3->Vp, p->size);
+                printf("\tla $%d, %d($fp)\n", reg1, p->offset);
+                printf("\tadd $%d, $%d, %d\n", reg1, $3->Vp, reg1);
+                printf("\tlw $%d, 0($%d)\n", reg2, reg1);
+                struct var_ref *p = (struct var_ref *) malloc(sizeof(struct var_ref));
+                p->reg = reg2;
+                strcpy(p->id, $1->id);
+                $$ = p;
+            } else{
+                $$ = NULL;
             }
-            int reg1 = get_reg();
-            int reg2 = get_reg();
-            printf("\tmul $%d, $%d, %d\n", $3->Vp, $3->Vp, p->size);
-            printf("\tla $%d, \n", reg1);//TODO: Load base address of array into reg
-            printf("\tadd $%d, $%d, %d\n", );
-            printf("\tlw $%d, 0($%d)\n", reg2, reg1);
-            //TODO: Value of variable is now loaded in reg2. Need to modify var_ref's passing struct.
         }
 		| var_ref struct_tail{$$ = NULL;} /*UNIMPLEMENTED*/
 		;
@@ -643,10 +649,10 @@ dim		: MK_LB expr MK_RB {
             ptr id = search_id(arr_ref->id, current_scope);
             struct index_type* idx = (struct index_type*) malloc(sizeof(struct index_type));
             if(id != NULL){
-                idx->dim = p->dims;
+                idx->dims = id->dims;
                 int i;
-                for(i = 0; i < idx->dim; i ++){
-                    idx->dim_size[i] = p->dimsize[i];
+                for(i = 0; i < idx->dims; i ++){
+                    idx->dim_size[i] = id->dimsize[i];
                 }
             }
             int reg = get_reg();
