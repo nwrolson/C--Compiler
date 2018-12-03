@@ -6,6 +6,32 @@
 #include <string.h>
 #include "symboltable.h"
 
+struct cnst_struct{
+    int type;
+    int i;
+    float f;
+    char s[256];
+};
+
+struct var_ref{
+    int offset;
+    char id[256];
+};
+
+struct dim_lst{
+    int dimidx;
+    int dimsize;
+    struct dim_lst * next;
+};
+
+struct index_type(
+    int cnt;
+    int Vp;
+    int base_address;
+    int dim_size[10];
+    int dims;
+);
+
 static int linenumber = 1;
 
 int ARoffset;
@@ -13,6 +39,8 @@ int reg_number = 8;
 int current_type;
 char current_scope[256] = "global";
 int current_label=0;
+
+struct var_ref* arr_ref;
 
 int stack[100];
 int top;
@@ -103,25 +131,6 @@ void insert_var(char* id, int arr){
         }
     }
 }
-
-struct cnst_struct{
-    int type;
-    int i;
-    float f;
-    char s[256];
-};
-
-struct var_ref{
-    int offset;
-    char id[256];
-};
-
-struct dim_lst{
-    int dimidx;
-    int dimsize;
-    struct dim_lst * next;
-};
-
 %}
 
 %union {
@@ -132,7 +141,8 @@ struct dim_lst{
  int place;
  struct cnst_struct* con;
  struct var_ref* var;
- struct dim_lst* dim;
+ struct dim_list* dim;
+ struct index_type* idxtype;
 }
 
 %token<id> ID
@@ -177,6 +187,7 @@ struct dim_lst{
 %type<var> var_ref
 %type<op> add_op mul_op rel_op
 %type<dim> dim_decl
+%type<idxtype> dim
 
 %start program
 
@@ -310,7 +321,7 @@ dim_decl	: MK_LB cexpr MK_RB {
 		| dim_decl MK_LB cexpr MK_RB {
             struct dim_lst * p;
             p = (struct dim_lst*) malloc(sizeof(struct dim_lst));
-            p -> dimidx = ++$1->dimidx;
+            p -> dimidx = $1->dimidx + 1;
             p -> dimsize = $3;
             p -> next = $1;
             $$ = p;
@@ -354,6 +365,7 @@ init_id		: ID {
                 while(p != NULL){
                     q->dims++;
                     q->dimsize[p->dimidx] = p->dimsize;
+                    p=p->next;
                 }
             }
             if(strcmp(current_scope, "global")==0){
@@ -610,17 +622,45 @@ var_ref		: ID {
                 strcpy(p->id, $1);
                 $$ = p;
             }
-		| var_ref dim {
-            $$ = NULL;
-          } /*UNIMPLEMENTED*/
+		| var_ref {arr_ref = $1;} dim {
+            ptr p = search_id($1->id, current_scope);
+            if(p == NULL){
+                return;
+            }
+            int reg1 = get_reg();
+            int reg2 = get_reg();
+            printf("\tmul $%d, $%d, %d\n", $3->Vp, $3->Vp, p->size);
+            printf("\tla $%d, \n", reg1);//TODO: Load base address of array into reg
+            printf("\tadd $%d, $%d, %d\n", );
+            printf("\tlw $%d, 0($%d)\n", reg2, reg1);
+            //TODO: Value of variable is now loaded in reg2. Need to modify var_ref's passing struct.
+        }
 		| var_ref struct_tail{$$ = NULL;} /*UNIMPLEMENTED*/
 		;
 
 
 dim		: MK_LB expr MK_RB {
-
+            ptr id = search_id(arr_ref->id, current_scope);
+            struct index_type* idx = (struct index_type*) malloc(sizeof(struct index_type));
+            if(id != NULL){
+                idx->dim = p->dims;
+                int i;
+                for(i = 0; i < idx->dim; i ++){
+                    idx->dim_size[i] = p->dimsize[i];
+                }
+            }
+            int reg = get_reg();
+            printf("\tmove $%d, $%d\n", reg, $2);
+            idx->cnt = 1;
+            idx -> Vp = reg;
+            $$ = idx;
           }
         | dim MK_LB expr MK_RB {
+            int i = $1->cnt-1;
+            $1->cnt++;
+            printf("\tmul $%d, $%d, %d\n", $1->Vp, $1->Vp, $1->dim_size[i]);
+            printf("\tadd $%d, $%d, $%d\n", $1->Vp, $1->Vp, $3);
+            $$ = $1;
           }
 		;
 
