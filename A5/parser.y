@@ -404,12 +404,13 @@ stmt_list	: stmt_list stmt
 stmt		: MK_LBRACE block MK_RBRACE
 		/* | While Statement here */
 		| WHILE MK_LPAREN relop_expr_list MK_RPAREN stmt
-	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON relop_expr_list{
+	    | FOR MK_LPAREN assign_expr_list MK_SEMICOLON {
             int label = get_label();
             push(label);
             printf("_Test%d:\n", label);
-            printf("\tbeqz $%d, _Exit%d\n", $5, label);
-            
+          } relop_expr_list{
+            int label = peek();
+            printf("\tbeqz $%d, _Exit%d\n", $6, label);
           } MK_SEMICOLON {
             int label = peek();
             printf("\tj _Body%d\n", label);
@@ -420,7 +421,7 @@ stmt		: MK_LBRACE block MK_RBRACE
             printf("_Body%d:\n", label);            
           } MK_RPAREN stmt {
             int label = pop();
-            printf("\tj _Inc%d", label);
+            printf("\tj _Inc%d\n", label);
             printf("_Exit%d:\n", label);
           }
 		/* | If then else here */ 
@@ -685,7 +686,7 @@ int main (int argc, char *argv[])
     else
         yyin=stdin;
     yyparse();
-    printf("%s\n", "Parsing completed. No errors found.");
+    printf("#%s\n", "Parsing completed. No errors found.");
     print_symtab();
     cleanup_symtab();
     return 0;
