@@ -573,19 +573,25 @@ term		: term mul_op factor
 mul_op		: OP_TIMES {$$ = 0;}
 		| OP_DIVIDE {$$ = 1;}
 		;
-
-factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
+factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = $2;}
 		/* | -(<relop_expr>) */ 
-		| OP_NOT MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
+		| OP_NOT MK_LPAREN relop_expr MK_RPAREN {
+            int reg = get_reg();
+            printf("\tseqz $%d, $%d", reg, $3);
+            $$ = reg;
+        }
                 /* OP_MINUS condition added as C could have a condition like: "if(-(i < 10))".	*/		
-		| OP_MINUS MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
+		| OP_MINUS MK_LPAREN relop_expr MK_RPAREN {
+            int reg = get_reg();
+            printf("\tli $%d, -1", reg);
+            printf("\tmul $%d, $%d, $%d\n", reg, reg, $3);
+        }
 		| CONST {
                     int reg=get_reg();
-                    if($1->type == 1){
+                    if($1->type != 3){
                         printf("\tli $%d, %d\n", reg, $1->i);
                         $$ = reg;
-                    }
-                    if($1->type == 3){
+                    } else {
                         int label = get_label();
                         printf("\t.data\n");
                         printf("String%d:\t.ascii\t%s", label, $1->s);
@@ -593,9 +599,28 @@ factor		: MK_LPAREN relop_expr MK_RPAREN {$$ = -1;} /*UNIMPLEMENTED*/
                     }
                 }	
 		/* | - constant, here - is an Unary operator */ 
-		| OP_NOT CONST {$$ = -1;} /*UNIMPLEMENTED*/
-                /*OP_MINUS condition added as C could have a condition like: "if(-10)".	*/		
-		| OP_MINUS CONST {$$ = -1;} /*UNIMPLEMENTED*/
+		| OP_NOT CONST {
+            int reg = get_reg();
+            if($2->type == 1){
+                if($2->i != 0){
+                    printf("\tli $%d, %d\n", reg, 0);
+                } else {
+                    printf("\tli $%d, %d\n", reg, 1);
+                }
+            }
+            $$ = reg;
+        }
+        /*OP_MINUS condition added as C could have a condition like: "if(-10)".	*/		
+		| OP_MINUS CONST {
+            int reg=get_reg();
+            if($2->type == 1){
+                printf("\tli $%d, %d\n", reg, -$2->i);
+                $$ = reg;
+            } else if ($2->type == 2){
+                printf("\tli $%d, %f\n", reg, -$2->f);
+                $$ = reg;
+            }
+        }
 		| ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}/*UNIMPLEMENTED*/
 		/* | - func ( <relop_expr_list> ) */ 
 		| OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN {$$ = -1;}/*UNIMPLEMENTED*/
