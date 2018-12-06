@@ -34,7 +34,7 @@ struct index_type{
 
 static int linenumber = 1;
 
-int ARoffset;
+int ARoffset = -4;
 int reg_number = 8;
 int current_type;
 char current_scope[256] = "global";
@@ -208,23 +208,27 @@ global_decl	: decl_list function_decl
 		;
 
 function_decl	: type ID MK_LPAREN param_list MK_RPAREN MK_LBRACE {
-                    ARoffset = -4; /*TODO: Fix AR offset for parameters*/
                     gen_head($2);
                     gen_prologue($2);
                     strcpy(current_scope, $2);
                     change_scope("param", current_scope);
                 } block {
                     gen_epilogue($2);
-                } MK_RBRACE {strcpy(current_scope, "global");}
+                } MK_RBRACE {
+                    strcpy(current_scope, "global");
+                    ARoffset = -4;
+                }
                 /*Empty parameter list.*/
 		| type ID MK_LPAREN MK_RPAREN MK_LBRACE {
-            ARoffset = -4;
             gen_head($2);
             gen_prologue($2);
             strcpy(current_scope, $2);
         } block {
             gen_epilogue($2);
-        } MK_RBRACE {strcpy(current_scope, "global");}
+        } MK_RBRACE {
+            strcpy(current_scope, "global");
+            ARoffset = -4;
+        }
                 /*Function declarations. The above ones are function definitions*/
 		| type ID MK_LPAREN param_list MK_RPAREN MK_SEMICOLON 
 		| type ID MK_LPAREN MK_RPAREN MK_SEMICOLON
